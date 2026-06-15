@@ -39,25 +39,16 @@ input[type=text]:focus,input[type=password]:focus{border-color:#A84E3C}
 .btn-icon{background:none;border:none;cursor:pointer;font-size:26px;padding:6px;-webkit-tap-highlight-color:transparent}
 .btn-del{background:#3a1a1a;border:none;cursor:pointer;color:#f66;font-size:20px;padding:8px 12px;border-radius:8px}
 
-/* API Setup */
-.api-box{background:#252525;border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid #333}
-.api-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.api-label{font-size:15px;color:#aaa}
-.api-badge{font-size:13px;padding:4px 10px;border-radius:20px}
-.api-badge.set{background:#0d2e0d;color:#4caf50}
-.api-badge.unset{background:#2e0d0d;color:#f55}
-.api-toggle{font-size:13px;color:#A84E3C;background:none;border:none;cursor:pointer;padding:4px}
-
 /* Result */
-.result-card{background:#252525;border-radius:16px;padding:20px;margin-top:20px;border:1px solid #333}
-.result-word{font-size:28px;font-weight:700;color:#fff;margin-bottom:6px}
-.result-ipa{font-size:20px;color:#A84E3C;font-family:monospace;margin-bottom:6px}
-.result-zhuyin{font-size:18px;color:#ddd;margin-bottom:14px}
-.result-section{margin-top:14px}
-.result-section-title{font-size:14px;color:#A84E3C;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.result-section-body{font-size:16px;line-height:1.75;color:#ccc}
-.play-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
-.star-row{display:flex;justify-content:flex-end;margin-top:12px}
+.result-card{background:#252525;border-radius:16px;padding:20px;margin-top:16px;border:1px solid #333}
+.result-word{font-size:30px;font-weight:700;color:#fff;margin-bottom:16px}
+.play-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn-cambridge{background:#1a3a5c;color:#6ab0f5;border:1.5px solid #3a6090;padding:11px 18px;font-size:15px;border-radius:10px;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent}
+.btn-cambridge:active{background:#1e4a7a}
+.notes-area{margin-top:18px}
+.notes-area label{font-size:14px;color:#888;display:block;margin-bottom:8px}
+textarea.notes-input{width:100%;padding:12px 14px;background:#1e1e1e;border:1.5px solid #3a3a3a;border-radius:10px;color:#fff;font-size:16px;outline:none;resize:none;height:72px;font-family:inherit;transition:border-color .2s}
+textarea.notes-input:focus{border-color:#A84E3C}
 
 /* Category tabs */
 .cat-tabs{display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -97,10 +88,9 @@ input[type=text]:focus,input[type=password]:focus{border-color:#A84E3C}
 /* Vocab */
 .vocab-item{background:#252525;border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:12px;border:1px solid #2e2e2e}
 .vocab-info{flex:1;min-width:0}
-.vi-word{font-size:20px;font-weight:700}
-.vi-ipa{font-size:13px;color:#A84E3C;margin-top:3px;font-family:monospace}
-.vi-zh{font-size:15px;color:#999;margin-top:3px}
-.vocab-acts{display:flex;gap:8px;align-items:center}
+.vi-word{font-size:22px;font-weight:700}
+.vi-notes{font-size:15px;color:#999;margin-top:5px;line-height:1.5}
+.vocab-acts{display:flex;gap:8px;align-items:center;flex-shrink:0}
 
 /* States */
 .loading{text-align:center;padding:40px 20px;color:#666}
@@ -126,20 +116,10 @@ input[type=text]:focus,input[type=password]:focus{border-color:#A84E3C}
 <div class="content">
   <h1>🔍 查發音</h1>
 
-  <div class="api-box" id="apiBox">
-    <div class="api-row">
-      <span class="api-label">Anthropic API Key</span>
-      <span class="api-badge unset" id="apiBadge">未設定</span>
-    </div>
-    <div id="apiInputArea">
-      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
-      <button class="btn btn-primary" onclick="saveApiKey()">儲存 API Key</button>
-    </div>
-    <button class="api-toggle" id="apiToggle" onclick="toggleApiBox()" style="display:none">修改 API Key ▼</button>
+  <div style="display:flex;gap:10px;align-items:flex-start">
+    <input type="text" id="wordInput" placeholder="輸入英文單字" autocorrect="off" autocapitalize="none" style="flex:1">
+    <button class="btn btn-primary" style="width:auto;margin-top:0;white-space:nowrap" onclick="lookup()">查詢</button>
   </div>
-
-  <input type="text" id="wordInput" placeholder="輸入英文單字，例如：beautiful" autocorrect="off" autocapitalize="none">
-  <button class="btn btn-primary" onclick="analyzeWord()">分析發音</button>
 
   <div id="searchResult"></div>
 </div>
@@ -319,20 +299,16 @@ const RULES = [
 
 // ===== STATE =====
 let currentCat = 'baseball';
-let lastWord = '';
-let lastIpa = '';
-let lastAnalysis = null;
-let wordSpeed = 1.0;
+let currentLookupWord = '';
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
-  initApiKey();
   renderWords('baseball');
   renderSentences();
   renderRules();
   renderVocab();
   document.getElementById('wordInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') analyzeWord();
+    if (e.key === 'Enter') lookup();
   });
 });
 
@@ -343,163 +319,38 @@ function switchTab(i) {
   if (i === 4) renderVocab();
 }
 
-// ===== API KEY =====
-function initApiKey() {
-  const key = localStorage.getItem('anthropicKey');
-  if (key) {
-    document.getElementById('apiBadge').textContent = '已設定 ✓';
-    document.getElementById('apiBadge').className = 'api-badge set';
-    document.getElementById('apiInputArea').style.display = 'none';
-    document.getElementById('apiToggle').style.display = 'block';
-  }
-}
-
-function saveApiKey() {
-  const val = document.getElementById('apiKeyInput').value.trim();
-  if (!val.startsWith('sk-')) { showToast('請輸入有效的 API Key (sk-ant-...)'); return; }
-  localStorage.setItem('anthropicKey', val);
-  document.getElementById('apiBadge').textContent = '已設定 ✓';
-  document.getElementById('apiBadge').className = 'api-badge set';
-  document.getElementById('apiInputArea').style.display = 'none';
-  document.getElementById('apiToggle').style.display = 'block';
-  document.getElementById('apiKeyInput').value = '';
-  showToast('API Key 已儲存');
-}
-
-function toggleApiBox() {
-  const area = document.getElementById('apiInputArea');
-  const tog  = document.getElementById('apiToggle');
-  if (area.style.display === 'none') {
-    area.style.display = 'block';
-    tog.textContent = '收起 ▲';
-  } else {
-    area.style.display = 'none';
-    tog.textContent = '修改 API Key ▼';
-  }
-}
-
-// ===== ANALYZE WORD =====
-async function analyzeWord() {
+// ===== LOOKUP =====
+function lookup() {
   const word = document.getElementById('wordInput').value.trim();
   if (!word) { showToast('請輸入英文單字'); return; }
-  const key = localStorage.getItem('anthropicKey');
-  if (!key) { showToast('請先設定 Anthropic API Key'); return; }
-
-  const el = document.getElementById('searchResult');
-  el.innerHTML = `<div class="loading"><div class="spinner"></div><br>分析中...</div>`;
-  lastWord = word;
-
-  const prompt = `請分析英文單字「${word}」的發音，用繁體中文回答，以 JSON 格式回傳以下欄位（不要加任何 markdown 標記，直接輸出 JSON）：
-{
-  "word": "原始單字",
-  "ipa": "IPA音標，例如 /ˈbjuːtɪfl/",
-  "zhuyin": "用注音符號標示發音，例如 ㄅ一ㄡˋ ㄊ一ˊ ㄈㄨㄦ",
-  "howToSay": "用繁體中文說明整體怎麼念（2-3句，可用注音輔助）",
-  "syllables": "音節分解說明，例如 beau·ti·ful，說明每個音節",
-  "commonErrors": "台灣人常犯的發音錯誤或容易混淆的地方",
-  "example": {"en": "例句（簡短）", "zh": "中文翻譯"}
-}`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
-        messages: [{role:'user', content: prompt}]
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(()=>({}));
-      throw new Error(err.error?.message || `HTTP ${res.status}`);
-    }
-
-    const data = await res.json();
-    const text = data.content[0].text.trim();
-
-    let parsed;
-    try {
-      const jsonStr = text.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      throw new Error('解析回應失敗，請再試一次');
-    }
-
-    lastAnalysis = parsed;
-    lastIpa = parsed.ipa || '';
-    renderResult(parsed);
-
-  } catch(e) {
-    el.innerHTML = `<div class="err">❌ 發生錯誤：${escHtml(e.message)}<br><br>請確認 API Key 是否正確，或稍後再試。</div>`;
-  }
-}
-
-function renderResult(d) {
-  const saved = getSavedWords().some(w => w.word === d.word);
+  currentLookupWord = word.toLowerCase();
+  const url = `https://dictionary.cambridge.org/zht/dictionary/english-chinese-traditional/${encodeURIComponent(currentLookupWord)}`;
   document.getElementById('searchResult').innerHTML = `
     <div class="result-card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div>
-          <div class="result-word">${escHtml(d.word)}</div>
-          <div class="result-ipa">${escHtml(d.ipa)}</div>
-          <div class="result-zhuyin">${escHtml(d.zhuyin)}</div>
-        </div>
-        <button class="btn-icon" id="starBtn" onclick="toggleSaveWord()" title="收藏">${saved ? '⭐' : '☆'}</button>
-      </div>
-
-      <div class="result-section">
-        <div class="result-section-title">怎麼念</div>
-        <div class="result-section-body">${escHtml(d.howToSay)}</div>
-      </div>
-
-      <div class="result-section">
-        <div class="result-section-title">音節分解</div>
-        <div class="result-section-body">${escHtml(d.syllables)}</div>
-      </div>
-
-      <div class="result-section">
-        <div class="result-section-title">常見錯誤</div>
-        <div class="result-section-body">${escHtml(d.commonErrors)}</div>
-      </div>
-
-      <div class="result-section">
-        <div class="result-section-title">例句</div>
-        <div class="result-section-body">
-          <strong>${escHtml(d.example.en)}</strong><br>
-          <span style="color:#999">${escHtml(d.example.zh)}</span>
-        </div>
-      </div>
-
+      <div class="result-word">${escHtml(word)}</div>
       <div class="play-row">
-        <button class="btn btn-play" onclick="speak('${escAttr(d.word)}', 1.0)">▶ 正常速度</button>
-        <button class="btn btn-slow" onclick="speak('${escAttr(d.word)}', 0.5)">🐢 慢速</button>
+        <button class="btn btn-play" onclick="speak('${escAttr(word)}', 1.0)">▶ 正常速度</button>
+        <button class="btn btn-slow" onclick="speak('${escAttr(word)}', 0.5)">🐢 慢速</button>
+        <a class="btn btn-cambridge" href="${url}" target="_blank" rel="noopener">📖 劍橋字典</a>
       </div>
+      <div class="notes-area">
+        <label>備註（中文意思、例句…）</label>
+        <textarea class="notes-input" id="notesInput" placeholder="例如：美麗的、形容詞"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveWord()">⭐ 收藏到單字本</button>
     </div>`;
 }
 
-function toggleSaveWord() {
-  if (!lastAnalysis) return;
+function saveWord() {
+  if (!currentLookupWord) return;
+  const notes = (document.getElementById('notesInput')?.value || '').trim();
   const saved = getSavedWords();
-  const idx = saved.findIndex(w => w.word === lastAnalysis.word);
-  if (idx >= 0) {
-    saved.splice(idx, 1);
-    document.getElementById('starBtn').textContent = '☆';
-    showToast('已從單字本移除');
+  const existing = saved.findIndex(w => w.word === currentLookupWord);
+  if (existing >= 0) {
+    saved[existing].notes = notes;
+    showToast('已更新備註');
   } else {
-    saved.unshift({
-      word: lastAnalysis.word,
-      ipa: lastAnalysis.ipa,
-      zhuyin: lastAnalysis.zhuyin,
-      zh: lastAnalysis.howToSay.substring(0, 30) + (lastAnalysis.howToSay.length > 30 ? '...' : '')
-    });
-    document.getElementById('starBtn').textContent = '⭐';
+    saved.unshift({ word: currentLookupWord, notes });
     showToast('已加入單字本 ⭐');
   }
   localStorage.setItem('savedWords', JSON.stringify(saved));
@@ -568,22 +419,24 @@ function renderVocab() {
   const list = document.getElementById('vocabList');
   const words = getSavedWords();
   if (!words.length) {
-    list.innerHTML = `<div class="empty"><div class="ei">⭐</div><p>還沒有收藏的單字<br>在「查發音」查詢後按 ☆ 收藏</p></div>`;
+    list.innerHTML = `<div class="empty"><div class="ei">⭐</div><p>還沒有收藏的單字<br>在「查發音」查詢後按收藏</p></div>`;
     return;
   }
-  list.innerHTML = words.map((w,i) => `
+  list.innerHTML = words.map((w,i) => {
+    const url = `https://dictionary.cambridge.org/zht/dictionary/english-chinese-traditional/${encodeURIComponent(w.word)}`;
+    return `
     <div class="vocab-item">
       <div class="vocab-info">
         <div class="vi-word">${escHtml(w.word)}</div>
-        <div class="vi-ipa">${escHtml(w.ipa)}</div>
-        <div class="vi-zh">${escHtml(w.zh)}</div>
+        ${w.notes ? `<div class="vi-notes">${escHtml(w.notes)}</div>` : ''}
       </div>
       <div class="vocab-acts">
-        <button class="btn btn-play" style="padding:10px 14px" onclick="speak('${escAttr(w.word)}', 1.0)">▶</button>
-        <button class="btn btn-slow" style="padding:10px 14px" onclick="speak('${escAttr(w.word)}', 0.5)">🐢</button>
-        <button class="btn-del" onclick="deleteVocab(${i})">✕</button>
+        <button class="btn btn-play" style="padding:10px 14px;font-size:18px" onclick="speak('${escAttr(w.word)}', 1.0)" title="播放">🔊</button>
+        <a class="btn btn-cambridge" href="${url}" target="_blank" rel="noopener" style="padding:10px 14px;font-size:18px" title="劍橋字典">📖</a>
+        <button class="btn-del" onclick="deleteVocab(${i})" title="刪除">✕</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function deleteVocab(i) {
