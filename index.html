@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>英文發音練習</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;min-height:100vh;-webkit-text-size-adjust:100%}
+
+/* Nav */
+.tab-nav{position:fixed;bottom:0;left:0;right:0;background:#111;display:flex;border-top:1px solid #2a2a2a;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.tab-btn{flex:1;padding:10px 2px 8px;background:none;border:none;color:#555;font-size:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s}
+.tab-btn .ico{font-size:20px;line-height:1}
+.tab-btn.active{color:#A84E3C}
+
+/* Layout */
+.content{padding:20px 16px 90px;max-width:620px;margin:0 auto}
+.panel{display:none}.panel.active{display:block}
+
+/* Typography */
+h1{font-size:24px;font-weight:700;margin-bottom:20px}
+h2{font-size:18px;font-weight:600;margin-bottom:14px;color:#ccc}
+
+/* Inputs */
+input[type=text],input[type=password]{width:100%;padding:14px 16px;background:#252525;border:1.5px solid #3a3a3a;border-radius:12px;color:#fff;font-size:18px;outline:none;transition:border-color .2s}
+input[type=text]:focus,input[type=password]:focus{border-color:#A84E3C}
+::placeholder{color:#555}
+
+/* Buttons */
+.btn{padding:14px 20px;border-radius:12px;border:none;cursor:pointer;font-size:16px;font-weight:600;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:#A84E3C;color:#fff;width:100%;margin-top:12px}
+.btn-primary:hover{background:#c05a47}
+.btn-play{background:#252525;color:#A84E3C;border:1.5px solid #A84E3C;padding:11px 18px;font-size:15px;border-radius:10px}
+.btn-play:active{background:#A84E3C;color:#fff}
+.btn-slow{background:#252525;color:#aaa;border:1.5px solid #3a3a3a;padding:11px 18px;font-size:15px;border-radius:10px}
+.btn-slow:active{background:#333}
+.btn-icon{background:none;border:none;cursor:pointer;font-size:26px;padding:6px;-webkit-tap-highlight-color:transparent}
+.btn-del{background:#3a1a1a;border:none;cursor:pointer;color:#f66;font-size:20px;padding:8px 12px;border-radius:8px}
+
+/* API Setup */
+.api-box{background:#252525;border-radius:14px;padding:16px;margin-bottom:20px;border:1px solid #333}
+.api-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.api-label{font-size:15px;color:#aaa}
+.api-badge{font-size:13px;padding:4px 10px;border-radius:20px}
+.api-badge.set{background:#0d2e0d;color:#4caf50}
+.api-badge.unset{background:#2e0d0d;color:#f55}
+.api-toggle{font-size:13px;color:#A84E3C;background:none;border:none;cursor:pointer;padding:4px}
+
+/* Result */
+.result-card{background:#252525;border-radius:16px;padding:20px;margin-top:20px;border:1px solid #333}
+.result-word{font-size:28px;font-weight:700;color:#fff;margin-bottom:6px}
+.result-ipa{font-size:20px;color:#A84E3C;font-family:monospace;margin-bottom:6px}
+.result-zhuyin{font-size:18px;color:#ddd;margin-bottom:14px}
+.result-section{margin-top:14px}
+.result-section-title{font-size:14px;color:#A84E3C;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.result-section-body{font-size:16px;line-height:1.75;color:#ccc}
+.play-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.star-row{display:flex;justify-content:flex-end;margin-top:12px}
+
+/* Category tabs */
+.cat-tabs{display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.cat-tabs::-webkit-scrollbar{display:none}
+.cat-tab{padding:10px 20px;border-radius:20px;background:#252525;color:#888;border:none;cursor:pointer;font-size:15px;white-space:nowrap;transition:all .2s;font-weight:500}
+.cat-tab.active{background:#A84E3C;color:#fff}
+
+/* Word grid */
+.speed-row{display:flex;align-items:center;gap:12px;margin-bottom:18px;background:#252525;border-radius:12px;padding:12px 16px}
+.speed-row label{font-size:15px;color:#aaa;white-space:nowrap}
+.speed-row input[type=range]{flex:1;accent-color:#A84E3C;cursor:pointer}
+.speed-val{font-size:15px;color:#A84E3C;min-width:32px;text-align:right}
+.word-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.word-card{background:#252525;border-radius:14px;padding:16px 14px;cursor:pointer;border:1px solid #2e2e2e;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.word-card:active{background:#333;border-color:#A84E3C}
+.wc-word{font-size:20px;font-weight:700;margin-bottom:4px}
+.wc-ipa{font-size:13px;color:#A84E3C;margin-bottom:5px;font-family:monospace}
+.wc-zh{font-size:15px;color:#999}
+.wc-icon{font-size:22px;margin-bottom:6px}
+
+/* Sentences */
+.sent-card{background:#252525;border-radius:14px;padding:18px;margin-bottom:12px;border:1px solid #2e2e2e}
+.sent-en{font-size:18px;font-weight:600;color:#fff;line-height:1.5;margin-bottom:8px}
+.sent-zh{font-size:15px;color:#999;margin-bottom:8px}
+.sent-stress{font-size:14px;color:#A84E3C;margin-bottom:14px}
+.sent-btns{display:flex;gap:8px}
+
+/* Rules */
+.rule-card{background:#252525;border-radius:14px;padding:18px;margin-bottom:12px;border:1px solid #2e2e2e}
+.rule-title{font-size:17px;font-weight:700;color:#A84E3C;margin-bottom:8px}
+.rule-desc{font-size:15px;color:#bbb;line-height:1.7;margin-bottom:14px;white-space:pre-line}
+.rule-exs{display:flex;flex-wrap:wrap;gap:8px}
+.ex-btn{background:#1e1e1e;border:1px solid #3a3a3a;border-radius:8px;padding:8px 14px;font-size:15px;cursor:pointer;color:#ddd;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.ex-btn:active{background:#A84E3C;border-color:#A84E3C;color:#fff}
+.ex-ipa{font-size:12px;color:#666;display:block;margin-top:2px}
+
+/* Vocab */
+.vocab-item{background:#252525;border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:12px;border:1px solid #2e2e2e}
+.vocab-info{flex:1;min-width:0}
+.vi-word{font-size:20px;font-weight:700}
+.vi-ipa{font-size:13px;color:#A84E3C;margin-top:3px;font-family:monospace}
+.vi-zh{font-size:15px;color:#999;margin-top:3px}
+.vocab-acts{display:flex;gap:8px;align-items:center}
+
+/* States */
+.loading{text-align:center;padding:40px 20px;color:#666}
+.spinner{display:inline-block;width:32px;height:32px;border:3px solid #2a2a2a;border-top-color:#A84E3C;border-radius:50%;animation:spin .7s linear infinite;margin-bottom:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 20px;color:#444}
+.empty .ei{font-size:56px;margin-bottom:16px}
+.empty p{font-size:16px}
+.err{background:#2e0d0d;border-radius:12px;padding:16px;margin-top:16px;color:#f88;font-size:15px;line-height:1.6}
+
+/* Toast */
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(10px);background:#333;color:#fff;padding:11px 22px;border-radius:22px;font-size:15px;z-index:200;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;border:1px solid #444}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Divider */
+.divider{height:1px;background:#2a2a2a;margin:20px 0}
+</style>
+</head>
+<body>
+
+<!-- ===== TAB 1: 查發音 ===== -->
+<div id="p0" class="panel active">
+<div class="content">
+  <h1>🔍 查發音</h1>
+
+  <div class="api-box" id="apiBox">
+    <div class="api-row">
+      <span class="api-label">Anthropic API Key</span>
+      <span class="api-badge unset" id="apiBadge">未設定</span>
+    </div>
+    <div id="apiInputArea">
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+      <button class="btn btn-primary" onclick="saveApiKey()">儲存 API Key</button>
+    </div>
+    <button class="api-toggle" id="apiToggle" onclick="toggleApiBox()" style="display:none">修改 API Key ▼</button>
+  </div>
+
+  <input type="text" id="wordInput" placeholder="輸入英文單字，例如：beautiful" autocorrect="off" autocapitalize="none">
+  <button class="btn btn-primary" onclick="analyzeWord()">分析發音</button>
+
+  <div id="searchResult"></div>
+</div>
+</div>
+
+<!-- ===== TAB 2: 常用單字 ===== -->
+<div id="p1" class="panel">
+<div class="content">
+  <h1>📚 常用單字</h1>
+  <div class="cat-tabs">
+    <button class="cat-tab active" onclick="switchCat(this,'baseball')">⚾ 棒球</button>
+    <button class="cat-tab" onclick="switchCat(this,'tech')">💻 科技</button>
+    <button class="cat-tab" onclick="switchCat(this,'daily')">🌅 日常</button>
+  </div>
+  <div class="speed-row">
+    <label>播放速度</label>
+    <input type="range" id="wordSpeed" min="0.3" max="1.5" step="0.1" value="1" oninput="updateSpeedLabel()">
+    <span class="speed-val" id="wordSpeedVal">1.0x</span>
+  </div>
+  <div class="word-grid" id="wordGrid"></div>
+</div>
+</div>
+
+<!-- ===== TAB 3: 實用句子 ===== -->
+<div id="p2" class="panel">
+<div class="content">
+  <h1>💬 實用句子</h1>
+  <div id="sentList"></div>
+</div>
+</div>
+
+<!-- ===== TAB 4: 發音規則 ===== -->
+<div id="p3" class="panel">
+<div class="content">
+  <h1>📖 發音規則</h1>
+  <div id="ruleList"></div>
+</div>
+</div>
+
+<!-- ===== TAB 5: 我的單字本 ===== -->
+<div id="p4" class="panel">
+<div class="content">
+  <h1>⭐ 我的單字本</h1>
+  <div id="vocabList"></div>
+</div>
+</div>
+
+<!-- Tab Navigation -->
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab(0)"><span class="ico">🔍</span><span>查發音</span></button>
+  <button class="tab-btn" onclick="switchTab(1)"><span class="ico">📚</span><span>常用單字</span></button>
+  <button class="tab-btn" onclick="switchTab(2)"><span class="ico">💬</span><span>實用句子</span></button>
+  <button class="tab-btn" onclick="switchTab(3)"><span class="ico">📖</span><span>發音規則</span></button>
+  <button class="tab-btn" onclick="switchTab(4)"><span class="ico">⭐</span><span>單字本</span></button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA =====
+const WORDS = {
+  baseball: [
+    {word:'pitcher', ipa:'/ˈpɪtʃər/', zh:'投手', ico:'⚾'},
+    {word:'batter',  ipa:'/ˈbætər/',  zh:'打者', ico:'🏏'},
+    {word:'homerun', ipa:'/ˈhoʊmrʌn/',zh:'全壘打',ico:'🏠'},
+    {word:'strike',  ipa:'/straɪk/',  zh:'好球', ico:'✅'},
+    {word:'catcher', ipa:'/ˈkætʃər/',zh:'捕手',  ico:'🧤'},
+    {word:'outfield',ipa:'/ˈaʊtfiːld/',zh:'外野',ico:'🌿'},
+    {word:'inning',  ipa:'/ˈɪnɪŋ/',  zh:'局數',  ico:'🔢'},
+    {word:'shortstop',ipa:'/ˈʃɔːrtstɒp/',zh:'游擊手',ico:'🏃'},
+  ],
+  tech: [
+    {word:'smartphone',ipa:'/ˈsmɑːrtfoʊn/',zh:'智慧手機',ico:'📱'},
+    {word:'software',  ipa:'/ˈsɒftweər/',  zh:'軟體',    ico:'💾'},
+    {word:'algorithm', ipa:'/ˈælɡərɪðəm/', zh:'演算法',  ico:'🧮'},
+    {word:'database',  ipa:'/ˈdeɪtəbeɪs/', zh:'資料庫',  ico:'🗄️'},
+    {word:'wireless',  ipa:'/ˈwaɪərləs/',  zh:'無線',    ico:'📡'},
+    {word:'download',  ipa:'/ˈdaʊnloʊd/',  zh:'下載',    ico:'⬇️'},
+    {word:'browser',   ipa:'/ˈbraʊzər/',   zh:'瀏覽器',  ico:'🌐'},
+    {word:'bandwidth', ipa:'/ˈbændwɪdθ/',  zh:'頻寬',    ico:'📶'},
+  ],
+  daily: [
+    {word:'breakfast',  ipa:'/ˈbrɛkfəst/',  zh:'早餐',   ico:'🍳'},
+    {word:'schedule',   ipa:'/ˈskɛdʒuːl/',  zh:'時間表', ico:'📅'},
+    {word:'restaurant', ipa:'/ˈrɛstərənt/', zh:'餐廳',   ico:'🍽️'},
+    {word:'pharmacy',   ipa:'/ˈfɑːrməsi/',  zh:'藥局',   ico:'💊'},
+    {word:'umbrella',   ipa:'/ʌmˈbrɛlə/',   zh:'雨傘',   ico:'☂️'},
+    {word:'comfortable',ipa:'/ˈkʌmftərbl/', zh:'舒適的', ico:'😌'},
+    {word:'beautiful',  ipa:'/ˈbjuːtɪfl/',  zh:'美麗的', ico:'🌸'},
+    {word:'hospital',   ipa:'/ˈhɒspɪtl/',   zh:'醫院',   ico:'🏥'},
+  ]
+};
+
+const SENTENCES = [
+  {en:"Where is the nearest subway station?",  zh:"最近的捷運站在哪裡？",   stress:"重音：WHERE、NEAR·est、SUB·way"},
+  {en:"Can I have the check, please?",          zh:"可以給我帳單嗎？",        stress:"重音：CHECK、PLEASE"},
+  {en:"How much does this cost?",               zh:"這個多少錢？",            stress:"重音：MUCH、COST"},
+  {en:"Could you speak more slowly, please?",   zh:"可以說慢一點嗎？",        stress:"重音：SPEAK、SLOW·ly"},
+  {en:"I'd like to make a reservation.",        zh:"我想要預約。",            stress:"重音：LIKE、res·er·VA·tion"},
+  {en:"What time does the store open?",         zh:"這家店幾點開？",          stress:"重音：TIME、STORE、O·pen"},
+  {en:"Excuse me, I'm lost.",                   zh:"不好意思，我迷路了。",    stress:"重音：SCUSE me、LOST"},
+  {en:"Do you have this in a different size?",  zh:"這個有其他尺寸嗎？",      stress:"重音：DIF·ferent、SIZE"},
+  {en:"I'm allergic to peanuts.",               zh:"我對花生過敏。",          stress:"重音：AL·ler·gic、PEA·nuts"},
+  {en:"Could you recommend a good restaurant?", zh:"可以推薦好餐廳嗎？",      stress:"重音：REC·om·mend、RES·tau·rant"},
+];
+
+const RULES = [
+  {
+    title:"靜音 E 規則 (Magic E)",
+    desc:"字尾加上 E，前面的母音唸長音（字母音）\n規律：子音 + 母音 + 子音 + e → 母音唸長音",
+    exs:[
+      {w:"make",  ipa:"/meɪk/"},
+      {w:"time",  ipa:"/taɪm/"},
+      {w:"hope",  ipa:"/hoʊp/"},
+      {w:"cute",  ipa:"/kjuːt/"},
+      {w:"these", ipa:"/ðiːz/"},
+    ]
+  },
+  {
+    title:"TH 的兩種發音",
+    desc:"清音 /θ/：舌尖輕抵上下齒之間，吹氣（不振動）\n濁音 /ð/：舌尖輕抵上下齒之間，振動聲帶",
+    exs:[
+      {w:"think",  ipa:"/θɪŋk/"},
+      {w:"three",  ipa:"/θriː/"},
+      {w:"through",ipa:"/θruː/"},
+      {w:"this",   ipa:"/ðɪs/"},
+      {w:"the",    ipa:"/ðə/"},
+      {w:"that",   ipa:"/ðæt/"},
+    ]
+  },
+  {
+    title:"-tion / -sion 的發音",
+    desc:"-tion 讀作 /ʃən/，重音在它前一個音節\n-sion 通常也讀 /ʃən/ 或 /ʒən/",
+    exs:[
+      {w:"nation",   ipa:"/ˈneɪʃən/"},
+      {w:"action",   ipa:"/ˈækʃən/"},
+      {w:"station",  ipa:"/ˈsteɪʃən/"},
+      {w:"question", ipa:"/ˈkwɛstʃən/"},
+      {w:"vision",   ipa:"/ˈvɪʒən/"},
+    ]
+  },
+  {
+    title:"OUGH 的多種發音",
+    desc:"ough 是英文最複雜的字母組合，有六種以上不同發音",
+    exs:[
+      {w:"though",  ipa:"/ðoʊ/ (歐)"},
+      {w:"through", ipa:"/θruː/ (嚕)"},
+      {w:"thought", ipa:"/θɔːt/ (厚特)"},
+      {w:"tough",   ipa:"/tʌf/ (塔夫)"},
+      {w:"cough",   ipa:"/kɒf/ (口夫)"},
+      {w:"bough",   ipa:"/baʊ/ (包)"},
+    ]
+  },
+  {
+    title:"PH 讀作 /f/",
+    desc:"ph 組合固定讀作 /f/（來自希臘文借字）\n記憶法：ph 看到就唸 f",
+    exs:[
+      {w:"phone",    ipa:"/foʊn/"},
+      {w:"photo",    ipa:"/ˈfoʊtoʊ/"},
+      {w:"graph",    ipa:"/ɡræf/"},
+      {w:"pharmacy", ipa:"/ˈfɑːrməsi/"},
+      {w:"alphabet", ipa:"/ˈælfəbɛt/"},
+    ]
+  },
+  {
+    title:"R 的捲舌音",
+    desc:"美式英文的 R 需要舌頭往後卷，不接觸上顎\n台灣人常錯：把 R 唸成注音的「ㄌ」",
+    exs:[
+      {w:"right",  ipa:"/raɪt/"},
+      {w:"river",  ipa:"/ˈrɪvər/"},
+      {w:"world",  ipa:"/wɜːrld/"},
+      {w:"order",  ipa:"/ˈɔːrdər/"},
+      {w:"arrow",  ipa:"/ˈæroʊ/"},
+    ]
+  },
+];
+
+// ===== STATE =====
+let currentCat = 'baseball';
+let lastWord = '';
+let lastIpa = '';
+let lastAnalysis = null;
+let wordSpeed = 1.0;
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  initApiKey();
+  renderWords('baseball');
+  renderSentences();
+  renderRules();
+  renderVocab();
+  document.getElementById('wordInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') analyzeWord();
+  });
+});
+
+// ===== TABS =====
+function switchTab(i) {
+  document.querySelectorAll('.panel').forEach((p,idx) => p.classList.toggle('active', idx===i));
+  document.querySelectorAll('.tab-btn').forEach((b,idx) => b.classList.toggle('active', idx===i));
+  if (i === 4) renderVocab();
+}
+
+// ===== API KEY =====
+function initApiKey() {
+  const key = localStorage.getItem('anthropicKey');
+  if (key) {
+    document.getElementById('apiBadge').textContent = '已設定 ✓';
+    document.getElementById('apiBadge').className = 'api-badge set';
+    document.getElementById('apiInputArea').style.display = 'none';
+    document.getElementById('apiToggle').style.display = 'block';
+  }
+}
+
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val.startsWith('sk-')) { showToast('請輸入有效的 API Key (sk-ant-...)'); return; }
+  localStorage.setItem('anthropicKey', val);
+  document.getElementById('apiBadge').textContent = '已設定 ✓';
+  document.getElementById('apiBadge').className = 'api-badge set';
+  document.getElementById('apiInputArea').style.display = 'none';
+  document.getElementById('apiToggle').style.display = 'block';
+  document.getElementById('apiKeyInput').value = '';
+  showToast('API Key 已儲存');
+}
+
+function toggleApiBox() {
+  const area = document.getElementById('apiInputArea');
+  const tog  = document.getElementById('apiToggle');
+  if (area.style.display === 'none') {
+    area.style.display = 'block';
+    tog.textContent = '收起 ▲';
+  } else {
+    area.style.display = 'none';
+    tog.textContent = '修改 API Key ▼';
+  }
+}
+
+// ===== ANALYZE WORD =====
+async function analyzeWord() {
+  const word = document.getElementById('wordInput').value.trim();
+  if (!word) { showToast('請輸入英文單字'); return; }
+  const key = localStorage.getItem('anthropicKey');
+  if (!key) { showToast('請先設定 Anthropic API Key'); return; }
+
+  const el = document.getElementById('searchResult');
+  el.innerHTML = `<div class="loading"><div class="spinner"></div><br>分析中...</div>`;
+  lastWord = word;
+
+  const prompt = `請分析英文單字「${word}」的發音，用繁體中文回答，以 JSON 格式回傳以下欄位（不要加任何 markdown 標記，直接輸出 JSON）：
+{
+  "word": "原始單字",
+  "ipa": "IPA音標，例如 /ˈbjuːtɪfl/",
+  "zhuyin": "用注音符號標示發音，例如 ㄅ一ㄡˋ ㄊ一ˊ ㄈㄨㄦ",
+  "howToSay": "用繁體中文說明整體怎麼念（2-3句，可用注音輔助）",
+  "syllables": "音節分解說明，例如 beau·ti·ful，說明每個音節",
+  "commonErrors": "台灣人常犯的發音錯誤或容易混淆的地方",
+  "example": {"en": "例句（簡短）", "zh": "中文翻譯"}
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const text = data.content[0].text.trim();
+
+    let parsed;
+    try {
+      const jsonStr = text.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      throw new Error('解析回應失敗，請再試一次');
+    }
+
+    lastAnalysis = parsed;
+    lastIpa = parsed.ipa || '';
+    renderResult(parsed);
+
+  } catch(e) {
+    el.innerHTML = `<div class="err">❌ 發生錯誤：${escHtml(e.message)}<br><br>請確認 API Key 是否正確，或稍後再試。</div>`;
+  }
+}
+
+function renderResult(d) {
+  const saved = getSavedWords().some(w => w.word === d.word);
+  document.getElementById('searchResult').innerHTML = `
+    <div class="result-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <div class="result-word">${escHtml(d.word)}</div>
+          <div class="result-ipa">${escHtml(d.ipa)}</div>
+          <div class="result-zhuyin">${escHtml(d.zhuyin)}</div>
+        </div>
+        <button class="btn-icon" id="starBtn" onclick="toggleSaveWord()" title="收藏">${saved ? '⭐' : '☆'}</button>
+      </div>
+
+      <div class="result-section">
+        <div class="result-section-title">怎麼念</div>
+        <div class="result-section-body">${escHtml(d.howToSay)}</div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-section-title">音節分解</div>
+        <div class="result-section-body">${escHtml(d.syllables)}</div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-section-title">常見錯誤</div>
+        <div class="result-section-body">${escHtml(d.commonErrors)}</div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-section-title">例句</div>
+        <div class="result-section-body">
+          <strong>${escHtml(d.example.en)}</strong><br>
+          <span style="color:#999">${escHtml(d.example.zh)}</span>
+        </div>
+      </div>
+
+      <div class="play-row">
+        <button class="btn btn-play" onclick="speak('${escAttr(d.word)}', 1.0)">▶ 正常速度</button>
+        <button class="btn btn-slow" onclick="speak('${escAttr(d.word)}', 0.5)">🐢 慢速</button>
+      </div>
+    </div>`;
+}
+
+function toggleSaveWord() {
+  if (!lastAnalysis) return;
+  const saved = getSavedWords();
+  const idx = saved.findIndex(w => w.word === lastAnalysis.word);
+  if (idx >= 0) {
+    saved.splice(idx, 1);
+    document.getElementById('starBtn').textContent = '☆';
+    showToast('已從單字本移除');
+  } else {
+    saved.unshift({
+      word: lastAnalysis.word,
+      ipa: lastAnalysis.ipa,
+      zhuyin: lastAnalysis.zhuyin,
+      zh: lastAnalysis.howToSay.substring(0, 30) + (lastAnalysis.howToSay.length > 30 ? '...' : '')
+    });
+    document.getElementById('starBtn').textContent = '⭐';
+    showToast('已加入單字本 ⭐');
+  }
+  localStorage.setItem('savedWords', JSON.stringify(saved));
+}
+
+// ===== WORDS TAB =====
+function switchCat(btn, cat) {
+  document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderWords(cat);
+}
+
+function renderWords(cat) {
+  currentCat = cat;
+  const grid = document.getElementById('wordGrid');
+  grid.innerHTML = WORDS[cat].map(w => `
+    <div class="word-card" onclick="speak('${escAttr(w.word)}', parseFloat(document.getElementById('wordSpeed').value))">
+      <div class="wc-icon">${w.ico}</div>
+      <div class="wc-word">${escHtml(w.word)}</div>
+      <div class="wc-ipa">${escHtml(w.ipa)}</div>
+      <div class="wc-zh">${escHtml(w.zh)}</div>
+    </div>`).join('');
+}
+
+function updateSpeedLabel() {
+  const v = parseFloat(document.getElementById('wordSpeed').value).toFixed(1);
+  document.getElementById('wordSpeedVal').textContent = v + 'x';
+}
+
+// ===== SENTENCES TAB =====
+function renderSentences() {
+  document.getElementById('sentList').innerHTML = SENTENCES.map((s,i) => `
+    <div class="sent-card">
+      <div class="sent-en">${escHtml(s.en)}</div>
+      <div class="sent-zh">${escHtml(s.zh)}</div>
+      <div class="sent-stress">${escHtml(s.stress)}</div>
+      <div class="sent-btns">
+        <button class="btn btn-play" onclick="speak('${escAttr(s.en)}', 1.0)">▶ 聽發音</button>
+        <button class="btn btn-slow" onclick="speak('${escAttr(s.en)}', 0.5)">🐢 慢速</button>
+      </div>
+    </div>`).join('');
+}
+
+// ===== RULES TAB =====
+function renderRules() {
+  document.getElementById('ruleList').innerHTML = RULES.map(r => `
+    <div class="rule-card">
+      <div class="rule-title">${escHtml(r.title)}</div>
+      <div class="rule-desc">${escHtml(r.desc)}</div>
+      <div class="rule-exs">
+        ${r.exs.map(e => `
+          <button class="ex-btn" onclick="speak('${escAttr(e.w)}', 0.85)">
+            ${escHtml(e.w)}<span class="ex-ipa">${escHtml(e.ipa)}</span>
+          </button>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ===== VOCAB TAB =====
+function getSavedWords() {
+  try { return JSON.parse(localStorage.getItem('savedWords') || '[]'); }
+  catch { return []; }
+}
+
+function renderVocab() {
+  const list = document.getElementById('vocabList');
+  const words = getSavedWords();
+  if (!words.length) {
+    list.innerHTML = `<div class="empty"><div class="ei">⭐</div><p>還沒有收藏的單字<br>在「查發音」查詢後按 ☆ 收藏</p></div>`;
+    return;
+  }
+  list.innerHTML = words.map((w,i) => `
+    <div class="vocab-item">
+      <div class="vocab-info">
+        <div class="vi-word">${escHtml(w.word)}</div>
+        <div class="vi-ipa">${escHtml(w.ipa)}</div>
+        <div class="vi-zh">${escHtml(w.zh)}</div>
+      </div>
+      <div class="vocab-acts">
+        <button class="btn btn-play" style="padding:10px 14px" onclick="speak('${escAttr(w.word)}', 1.0)">▶</button>
+        <button class="btn btn-slow" style="padding:10px 14px" onclick="speak('${escAttr(w.word)}', 0.5)">🐢</button>
+        <button class="btn-del" onclick="deleteVocab(${i})">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function deleteVocab(i) {
+  const words = getSavedWords();
+  const removed = words[i];
+  words.splice(i, 1);
+  localStorage.setItem('savedWords', JSON.stringify(words));
+  renderVocab();
+  showToast(`已移除「${removed.word}」`);
+}
+
+// ===== SPEECH =====
+function speak(text, rate) {
+  if (!('speechSynthesis' in window)) { showToast('此瀏覽器不支援語音功能'); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US';
+  u.rate = rate || 1;
+  u.pitch = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const enVoice = voices.find(v => v.lang.startsWith('en-') && !v.name.includes('compact'));
+  if (enVoice) u.voice = enVoice;
+  window.speechSynthesis.speak(u);
+}
+
+// Load voices eagerly
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices());
+}
+
+// ===== UTILS =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(s) {
+  return String(s||'').replace(/'/g,"\\'");
+}
+</script>
+</body>
+</html>
