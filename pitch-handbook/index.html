@@ -159,10 +159,9 @@ ol.steps li{margin-bottom:4px}
 .bt.l{transform:scaleX(-1)}
 @keyframes sw{0%{transform:rotate(0)}55%{transform:rotate(125deg)}100%{transform:rotate(0)}}
 .zone{display:grid;grid-template-columns:repeat(5,52px);grid-auto-rows:52px;gap:3px}
-.zone button{border-radius:8px;border:1px solid #4a5568;background:#262f3d;font-weight:800;font-size:.8rem;color:#111;padding:0}
+.zone button{border-radius:8px;border:1px solid #56627a;background:#2c3646;font-weight:800;font-size:.8rem;color:#111;padding:0}
 .zone button:active{filter:brightness(1.4)}
 .zone button.z{background:#3d4a5f;border:2px solid #8b99ad}
-.zone button.sug{border:3px dashed var(--next)}
 .zone button.sel{outline:3px solid var(--accent);outline-offset:-1px;background:rgba(242,204,96,.25)}
 .zone button[class*="r-"]{color:#111}
 .zone .r-swstr,.zone .r-called{background:var(--accent)!important}
@@ -914,12 +913,12 @@ function viewSetup(){
     ${st.n ? `<p class="muted small">戰績：${st.n} 打席・三振 ${st.k}・保送 ${st.bb}・被安打 ${st.h}・出局 ${st.o}・平均配球分 ${Math.round(st.sum / st.n)}　<a href="#" data-g="resetStats" style="color:var(--muted)">歸零</a></p>` : ""}`;
 }
 function fieldHtml(g, live){
-  const P = g.prof, a = g.advice, hint = live && store.play.hints;
+  const P = g.prof;
   let cells = "";
   for (let y = 0; y < 5; y++) for (let col = 0; col < 5; col++) {
     const x = P.hand === "R" ? col : 4 - col, c = { x, y };
     const here = g.pitches.filter(p => p.x === x && p.y === y), lp = here[here.length - 1];
-    const cls = [inZ(c) ? "z" : "o", hint && a.cells.some(k => k.x === x && k.y === y) ? "sug" : "",
+    const cls = [inZ(c) ? "z" : "o", 
       live && g.sel.cell && g.sel.cell.x === x && g.sel.cell.y === y ? "sel" : "", lp ? "r-" + lp.res : ""].join(" ");
     cells += `<button class="${cls}" ${live ? `data-g="cell" data-x="${x}" data-y="${y}"` : "disabled"} aria-label="${locName(c)}">${here.map(p => p.n).join(",")}</button>`;
   }
@@ -937,7 +936,7 @@ function viewLive(){
       <div><span class="k">判讀</span>${esc(a.it.read)}</div>
       <div><span class="k">做法</span><b>${esc(a.it.next)}</b></div>
       <div><span class="k">球種</span>${esc(adviceTypes(a))}</div>
-      <div><span class="k">落點</span>${esc(a.loc)}<span class="muted">（虛線格）</span></div>
+      <div><span class="k">落點</span>${esc(a.loc)}</div>
       ${a.slot ? `<div><span class="k">角度</span>${esc(a.slot)}</div>` : ""}</div>` : "";
   return `<div class="sb"><div class="cnt"><span>B</span>${dots(g.b, 3, "b")}<span>S</span>${dots(g.s, 2, "s")}</div>
       <div class="who">${g.prof.hand === "R" ? "右打者" : "左打者"}（${g.same ? "同側" : "異側"}）・第 ${g.pitches.length + 1} 球</div><button data-g="quit">放棄</button></div>

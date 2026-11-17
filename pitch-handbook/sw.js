@@ -1,5 +1,5 @@
 // 離線快取：先回快取、背景更新。改了 index.html 後，使用者下次開啟會拿到新版（再開一次生效）。
-const CACHE = "maddog-pitch-v4";
+const CACHE = "maddog-pitch-v5";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png", "og.png"];
 
 self.addEventListener("install", e => {
