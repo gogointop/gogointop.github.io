@@ -172,6 +172,21 @@ ol.steps li{margin-bottom:4px}
 b.r-swstr,b.r-called,b.r-foul{color:var(--accent)} b.r-ball{color:var(--next)} b.r-hit{color:var(--danger)} b.r-out{color:var(--cue)}
 .zl{display:flex;justify-content:space-between;font-size:.68rem;color:var(--muted);margin-top:3px}
 .miss{color:#f0883e;font-weight:700}
+.tcard{border:2px solid var(--accent);border-radius:16px;padding:14px;background:linear-gradient(160deg,rgba(242,204,96,.12),var(--card) 60%)}
+.tc-top{display:flex;align-items:center;gap:14px}
+.tcard .ti{font-size:3rem;line-height:1}
+.tcard .tl{font-size:.75rem;color:var(--muted);font-weight:700}
+.tcard .tn{font-size:1.5rem;font-weight:900;color:var(--accent)}
+.tcard .td{font-size:.85rem;color:var(--muted)}
+.tstats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0 6px;text-align:center;font-size:.72rem;color:var(--muted)}
+.tstats b{display:block;font-size:1.1rem;color:var(--text)}
+.trow{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:8px}
+.trow .ti{font-size:2rem;flex:0 0 44px;text-align:center}
+.trow.locked{opacity:.55}
+.trow.cur{border-color:var(--accent)}
+.unlock{display:flex;gap:12px;align-items:center;border:2px solid var(--accent);background:rgba(242,204,96,.15);border-radius:14px;padding:10px 14px;margin-bottom:10px;animation:pop .5s ease-out}
+.unlock span{font-size:2.2rem}
+@keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
 .rv{border-bottom:1px solid var(--line);padding:8px 2px}
 
 /* 底部分頁 */
@@ -512,6 +527,11 @@ let store = { pitchers:[], opponents:[], pov:"", play:{ types:["四縫速球","�
 try { Object.assign(store, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
 store.play = Object.assign({ types:["四縫速球","滑球","變速球"], hand:"?", hints:true, pit:"", phand:"R", slot:"tq", level:"am" }, store.play);
 for (const k of ["statsPro", "statsPain"]) if (!store[k]) store[k] = { n:0, k:0, bb:0, h:0, o:0, sum:0 };
+if (!store.hist) {  /* 稱號用的逐打席紀錄；更新前的戰績保留成舊總數 */
+  store.hist = { am:[], pro:[], pain:[] };
+  store.legacy = { am:{ ...store.stats }, pro:{ ...store.statsPro }, pain:{ ...store.statsPain } };
+}
+if (!store.titles) store.titles = {};
 let saveOk = true;
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(store)); saveOk = true; } catch (e) { if (saveOk) toast("⚠ 這個瀏覽器無法儲存資料"); saveOk = false; } }
 
@@ -895,6 +915,7 @@ function throwPitch(){
     g.advice = advise(g);
   } else {
     const st = statsOf(); st.n++; st.sum += score(g);
+    recordPA(g);
     st[g.end === "ks" || g.end === "kl" ? "k" : g.end === "bb" ? "bb" : g.end === "hit" ? "h" : "o"]++;
     save();
   }
@@ -921,7 +942,7 @@ function viewPlay(){
   return game.end ? viewDone() : viewLive();
 }
 function viewSetup(){
-  const p = store.play, st = statsOf();
+  const p = store.play;
   return `<p class="muted small">你配球，模擬打者做反應。每一球之後會告訴你：他露出什麼線索、這球配得如何、下一球怎麼配會更好。</p>
     ${store.pitchers.length ? `<label class="f">帶入已登記的投手</label>
       <select class="in" id="gPit"><option value="">自己勾球種</option>${store.pitchers.map(x => `<option value="${x.id}"${x.id === p.pit ? " selected" : ""}>${esc(x.name || "未命名")}${x.no ? " #" + esc(x.no) : ""}</option>`).join("")}</select>` : ""}
@@ -943,7 +964,8 @@ function viewSetup(){
     <label class="f">建議</label>
     <div class="seg"><button data-g="hints" data-v="1" class="${p.hints ? "on" : ""}">每球都給建議</button><button data-g="hints" data-v="" class="${p.hints ? "" : "on"}">打完才檢討</button></div>
     <button class="btn pri" style="margin-top:18px" data-g="start"${p.types.length ? "" : " disabled"}>開始打席</button>
-    ${st.n ? `<p class="muted small">${LEVELS[p.level]}戰績：${st.n} 打席・三振 ${st.k}・保送 ${st.bb}・被安打 ${st.h}・出局 ${st.o}・平均配球分 ${Math.round(st.sum / st.n)}　<a href="#" data-g="resetStats" style="color:var(--muted)">歸零</a></p>` : ""}`;
+    <div class="sec">我的稱號</div>
+    ${titleCard(p.level)}`;
 }
 function fieldHtml(g, live){
   const P = g.prof;
@@ -994,7 +1016,9 @@ function viewDone(){
   if (g.low === 2) tips.push("下勾的高位速球是武器：好球帶上緣的上飄球他很難打紮實");
   if (g.expect !== P.expect) tips.push("打席中他調整過等球的時間點，啟動早晚變了就是訊號");
   const luck = sc >= 75 && !good ? "配球的思路沒問題，結果不好是機率。" : sc < 50 && good ? "結果是好的，但過程有點靠運氣。" : "";
-  return `<div class="principle"><b>打席結果（${LEVELS[g.level]}）</b><span style="font-size:1.25rem;font-weight:800">${out}</span>　配球分 <b>${sc}</b>
+  const nt = (g.newTitles || []).map(t => `<div class="unlock"><span>${t.icon}</span><div><b>解鎖新稱號：${t.name}</b><div class="small">${t.sub}</div></div></div>`).join("")
+    + (g.mainChanged && !(g.newTitles || []).includes(g.mainChanged) ? `<div class="unlock"><span>${g.mainChanged.icon}</span><div><b>目前稱號變成：${g.mainChanged.name}</b><div class="small">${g.mainChanged.sub}</div></div></div>` : "");
+  return nt + `<div class="principle"><b>打席結果（${LEVELS[g.level]}）</b><span style="font-size:1.25rem;font-weight:800">${out}</span>　配球分 <b>${sc}</b>
       <div class="small" style="margin-top:4px">👁 ${CUE[last.cue]}${luck ? "<br>" + luck : ""}</div></div>
     ${fieldHtml(g, false)}
     <div class="sec">逐球檢討</div>
@@ -1020,7 +1044,8 @@ document.addEventListener("click", e => {
     case "start": if (!p.types.length) return; save(); newBatter(); render(); return;
     case "setup": game = null; render(); return;
     case "quit": if (game.pitches.length && !confirm("放棄這個打席？")) return; game = null; render(); return;
-    case "resetStats": e.preventDefault(); if (!confirm("戰績歸零？")) return; store[STATS_KEY[p.level] || "stats"] = { n:0, k:0, bb:0, h:0, o:0, sum:0 }; break;
+    case "resetStats": e.preventDefault(); if (!confirm("戰績歸零？")) return; store[STATS_KEY[p.level] || "stats"] = { n:0, k:0, bb:0, h:0, o:0, sum:0 }; store.hist[p.level] = []; store.legacy[p.level] = null; break;
+    case "share": shareCard(); return;
     case "pt": game.sel.type = v; render(true); return;
     case "cell": game.sel.cell = { x:+t.dataset.x, y:+t.dataset.y }; render(true); return;
     case "throw": throwPitch(); render(); game.anim = false; return;
@@ -1035,6 +1060,150 @@ document.addEventListener("change", e => {
   if (pt) { store.play.phand = pt.hand === "L" ? "L" : "R"; store.play.slot = pt.slot || "tq"; const names = (pt.pitches || []).map(x => x.type); store.play.types = PITCH_TYPES.map(x => x.name).filter(n => n !== "其他" && names.includes(n)); }
   save(); render(true);
 });
+
+/* ---------- 稱號 ----------
+   以「最近 20 打席」計算；三振率、被安打率的門檻依難度放寬 */
+const WINDOW = 20;
+const TH = {
+  am:   { k:.60, kLow:.45, km:.75, hHi:.30, hLow:.05, hBad:.20 },
+  pro:  { k:.40, kLow:.30, km:.55, hHi:.40, hLow:.10, hBad:.28 },
+  pain: { k:.22, kLow:.15, km:.35, hHi:.50, hLow:.18, hBad:.40 }
+};
+const pct = x => Math.round(x * 100) + "%";
+/* 排列順序＝稀有度：同時符合時取最前面的當主稱號 */
+const TITLES = [
+  { id:"emperor", icon:"👑", name:"配球皇帝", sub:"配得對，結果也好",
+    cond:t => `配球分 ≥ 85，三振率 ≥ ${pct(t.k)}`, test:(w, t) => w.sc >= 85 && w.kR >= t.k },
+  { id:"conquer", icon:"🏔", name:"痛苦征服者", sub:"在痛苦模式活下來的人", pain:true,
+    cond:() => "痛苦模式：三振率 ≥ 30%，被安打率 ≤ 20%", test:(w, t, lv) => lv === "pain" && w.kR >= .3 && w.hR <= .2 },
+  { id:"mind", icon:"🔮", name:"讀心術", sub:"打者永遠猜不到你下一球", pain:true,
+    cond:() => "痛苦模式：被猜到的球 ≤ 5%，配球分 ≥ 70", test:(w, t, lv) => lv === "pain" && w.gR !== null && w.gR <= .05 && w.sc >= 70 },
+  { id:"kmonster", icon:"🔥", name:"三振魔人", sub:"三振是唯一的語言",
+    cond:t => `三振率 ≥ ${pct(t.km)}`, test:(w, t) => w.kR >= t.km },
+  { id:"rebel", icon:"😈", name:"反骨仔", sub:"不照書，還一直三振人",
+    cond:t => `三振率 ≥ ${pct(t.k)}，配球分 ≤ 40`, test:(w, t) => w.kR >= t.k && w.sc <= 40 },
+  { id:"lucky", icon:"🎲", name:"天選之人", sub:"亂配卻沒被打，純運氣",
+    cond:t => `配球分 ≤ 40，被安打率 ≤ ${pct(t.hLow)}`, test:(w, t) => w.sc <= 40 && w.hR <= t.hLow },
+  { id:"unlucky", icon:"😭", name:"非戰之罪", sub:"配得好卻一直被打",
+    cond:t => `配球分 ≥ 75，被安打率 ≥ ${pct(t.hBad)}`, test:(w, t) => w.sc >= 75 && w.hR >= t.hBad },
+  { id:"nerd", icon:"📚", name:"書呆子捕手", sub:"照書配，結果卻普通",
+    cond:t => `配球分 ≥ 85，三振率 < ${pct(t.kLow)}`, test:(w, t) => w.sc >= 85 && w.kR < t.kLow },
+  { id:"slave", icon:"📖", name:"秘笈奴隸", sub:"每一球都被打者猜到", pain:true,
+    cond:() => "痛苦模式：被猜到的球 ≥ 30%", test:(w, t, lv) => lv === "pain" && w.gR !== null && w.gR >= .3 },
+  { id:"express", icon:"🚚", name:"紅中快遞", sub:"使命必達，送到打者最愛的位置",
+    cond:t => `被安打率 ≥ ${pct(t.hHi)}`, test:(w, t) => w.hR >= t.hHi },
+  { id:"walker", icon:"🚶", name:"四壞製造機", sub:"打者不用揮棒也能上壘",
+    cond:() => "保送率 ≥ 20%", test:w => w.bbR >= .2 },
+  { id:"quick", icon:"⚡", name:"三球解決", sub:"不跟打者浪費時間",
+    cond:t => `平均每打席 ≤ 3.2 球，被安打率 < ${pct(t.hBad)}`, test:(w, t) => w.ppa !== null && w.ppa <= 3.2 && w.hR < t.hBad },
+  { id:"grind", icon:"🪢", name:"纏鬥王", sub:"每個打席都打成長期抗戰",
+    cond:() => "平均每打席 ≥ 5.5 球", test:w => w.ppa !== null && w.ppa >= 5.5 },
+  { id:"wall", icon:"🧱", name:"鐵壁控球", sub:"從不送人上壘",
+    cond:t => `連續 ${WINDOW} 打席零保送，三振率 ≥ ${pct(t.kLow)}`, test:(w, t) => w.n >= WINDOW && w.bb === 0 && w.kR >= t.kLow },
+  { id:"steady", icon:"🙂", name:"穩健型捕手", sub:"沒有明顯弱點",
+    cond:() => "打滿 10 打席，沒有符合其他稱號", test:() => true },
+  { id:"rookie", icon:"🐣", name:"見習捕手", sub:"再多打幾個打席", hidden:true,
+    cond:() => "打不到 10 打席", test:() => false }
+];
+const T_BY = Object.fromEntries(TITLES.map(t => [t.id, t]));
+const COLLECTIBLE = TITLES.filter(t => !t.hidden);
+
+/* 最近 20 打席；更新前的舊戰績只有總數，不足 20 打席時按比例補上 */
+function windowStats(lv){
+  const h = (store.hist[lv] || []).slice(-WINDOW);
+  const w = { n:h.length, k:0, bb:0, h:0, sum:0 };
+  for (const r of h) { w.sum += r.sc; if (r.end === "ks" || r.end === "kl") w.k++; else if (r.end === "bb") w.bb++; else if (r.end === "hit") w.h++; }
+  const L = store.legacy[lv];
+  if (w.n < WINDOW && L && L.n) {
+    const f = Math.min(WINDOW - w.n, L.n) / L.n;
+    w.n += L.n * f; w.k += L.k * f; w.bb += L.bb * f; w.h += L.h * f; w.sum += L.sum * f;
+  }
+  const np = h.reduce((a, r) => a + r.np, 0), gd = h.reduce((a, r) => a + (r.gd || 0), 0);
+  Object.assign(w, { kR:w.n ? w.k / w.n : 0, bbR:w.n ? w.bb / w.n : 0, hR:w.n ? w.h / w.n : 0, sc:w.n ? w.sum / w.n : 0,
+    ppa: h.length >= 10 ? np / h.length : null, gR: h.length >= 10 && np ? gd / np : null });
+  return w;
+}
+function titlesFor(lv){
+  const w = windowStats(lv), t = TH[lv] || TH.am;
+  if (w.n < 10) return { w, main:T_BY.rookie, all:[] };
+  const all = TITLES.filter(x => !x.hidden && x.id !== "steady" && x.test(w, t, lv));
+  return { w, main: all[0] || T_BY.steady, all: all.length ? all : [T_BY.steady] };
+}
+function recordPA(g){
+  const lv = g.level, h = store.hist[lv] || (store.hist[lv] = []);
+  h.push({ sc:score(g), end:g.end, np:g.pitches.length, gd:g.pitches.filter(p => p.guessed).length });
+  if (h.length > 200) h.splice(0, h.length - 200);
+  const before = titlesFor(lv).main.id;
+  g.newTitles = [];
+  for (const t of titlesFor(lv).all) if (!store.titles[t.id]) { store.titles[t.id] = { at:new Date().toISOString().slice(0, 10), lv }; g.newTitles.push(t); }
+  const now = titlesFor(lv).main;
+  g.mainChanged = before !== now.id && now.id !== "rookie" ? now : null;
+}
+function titleCard(lv){
+  const { w, main } = titlesFor(lv), t = TH[lv] || TH.am, st = store[STATS_KEY[lv]];
+  const got = COLLECTIBLE.filter(x => store.titles[x.id]).length;
+  const n = Math.round(w.n);
+  return `<div class="tcard">
+      <div class="tc-top"><div class="ti">${main.icon}</div><div><div class="tl">${LEVELS[lv]}・目前稱號</div><div class="tn">${main.name}</div><div class="td">${main.sub}</div></div></div>
+      ${n ? `<div class="tstats"><div><b>${pct(w.kR)}</b>三振率</div><div><b>${Math.round(w.sc)}</b>配球分</div><div><b>${pct(w.hR)}</b>被安打率</div><div><b>${pct(w.bbR)}</b>保送率</div></div>
+      <div class="muted small">最近 ${n} 打席${n < 10 ? `・再打 ${10 - n} 打席就有稱號` : ""}</div>` : `<div class="muted small">打完 10 個打席就會得到第一個稱號</div>`}
+    </div>
+    <label class="f">你的名字（顯示在戰績卡上）</label>
+    <input class="in" id="gName" maxlength="12" placeholder="例：阿明" value="${esc(store.play.name || "")}">
+    <div class="two" style="margin-top:10px"><button class="btn" data-g="share"${n >= 10 ? "" : " disabled"}>📤 分享戰績卡</button><button class="btn" data-go="#/titles">🏅 稱號收藏 ${got}/${COLLECTIBLE.length}</button></div>
+    ${st && st.n ? `<p class="muted small">${LEVELS[lv]}生涯：${st.n} 打席・三振 ${st.k}・保送 ${st.bb}・被安打 ${st.h}・出局 ${st.o}・平均配球分 ${Math.round(st.sum / st.n)}　<a href="#" data-g="resetStats" style="color:var(--muted)">歸零</a></p>` : ""}`;
+}
+function viewTitles(){
+  const lv = store.play.level, t = TH[lv] || TH.am, cur = titlesFor(lv).main.id;
+  const got = COLLECTIBLE.filter(x => store.titles[x.id]).length;
+  return `<p class="muted small">已解鎖 <b style="color:var(--accent)">${got}/${COLLECTIBLE.length}</b>。條件以最近 ${WINDOW} 打席計算，下面的門檻是「${LEVELS[lv]}」難度的數字；稱號一旦拿到就永久收藏。</p>
+    ${COLLECTIBLE.map(x => { const u = store.titles[x.id];
+      return `<div class="trow${u ? "" : " locked"}${x.id === cur ? " cur" : ""}"><div class="ti">${u ? x.icon : "🔒"}</div>
+        <div class="mid"><div><b>${x.name}</b>${x.id === cur ? ` <span class="badge">目前</span>` : ""}</div>
+        <div class="small">${u ? esc(x.sub) + "・" : ""}<span class="muted">${x.cond(t)}</span></div>
+        ${u ? `<div class="small muted">${u.at} 在${LEVELS[u.lv] || ""}模式解鎖</div>` : ""}</div></div>`; }).join("")}`;
+}
+
+/* 戰績卡圖片 */
+function drawCard(){
+  const lv = store.play.level, { w, main } = titlesFor(lv);
+  const got = COLLECTIBLE.filter(x => store.titles[x.id]).length;
+  const W = 1080, H = 1350, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const x = cv.getContext("2d"), F = '"PingFang TC","Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei",sans-serif';
+  const g = x.createRadialGradient(W * .7, H * .25, 50, W * .5, H * .4, 1100); g.addColorStop(0, "#22314a"); g.addColorStop(1, "#0d1117");
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const rr = (X, Y, w2, h2, r) => { x.beginPath(); if (x.roundRect) x.roundRect(X, Y, w2, h2, r); else x.rect(X, Y, w2, h2); };
+  x.textAlign = "center"; x.textBaseline = "alphabetic";
+  x.fillStyle = "#f2cc60"; x.font = `800 44px ${F}`; x.fillText("瘋狗野球 配球練習", W / 2, 120);
+  const lvTxt = LEVELS[lv] + "模式"; x.font = `800 40px ${F}`; const lw = x.measureText(lvTxt).width + 70;
+  x.fillStyle = lv === "pain" ? "#f85149" : lv === "pro" ? "#58a6ff" : "#3fb950"; rr(W / 2 - lw / 2, 160, lw, 70, 35); x.fill();
+  x.fillStyle = "#0d1117"; x.fillText(lvTxt, W / 2, 210);
+  x.fillStyle = "#e6edf3"; x.font = `800 64px ${F}`; x.fillText(store.play.name || "無名捕手", W / 2, 330);
+  x.font = `200px ${F}`; x.fillText(main.icon, W / 2, 570);
+  x.fillStyle = "#f2cc60"; x.font = `900 120px ${F}`; x.fillText(main.name, W / 2, 730);
+  x.fillStyle = "#b6c0cc"; x.font = `500 44px ${F}`; x.fillText(main.sub, W / 2, 800);
+  const cells = [[pct(w.kR), "三振率"], [String(Math.round(w.sc)), "配球分"], [pct(w.hR), "被安打率"], [pct(w.bbR), "保送率"]];
+  cells.forEach(([v, l], i) => {
+    const cx = 60 + (i % 2) * 490, cy = 870 + Math.floor(i / 2) * 190;
+    x.fillStyle = "#161b22"; rr(cx, cy, 470, 170, 28); x.fill(); x.strokeStyle = "#30363d"; x.lineWidth = 3; x.stroke();
+    x.fillStyle = i === 1 ? "#f2cc60" : "#e6edf3"; x.font = `900 78px ${F}`; x.fillText(v, cx + 235, cy + 95);
+    x.fillStyle = "#9aa4b0"; x.font = `600 36px ${F}`; x.fillText(l, cx + 235, cy + 145);
+  });
+  x.fillStyle = "#9aa4b0"; x.font = `500 34px ${F}`;
+  x.fillText(`最近 ${Math.round(w.n)} 打席・稱號收藏 ${got}/${COLLECTIBLE.length}・${new Date().toISOString().slice(0, 10)}`, W / 2, 1290);
+  return cv;
+}
+async function shareCard(){
+  const cv = drawCard(), name = "配球戰績卡-" + new Date().toISOString().slice(0, 10) + ".png";
+  const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+  const file = new File([blob], name, { type:"image/png" });
+  const { main } = titlesFor(store.play.level);
+  try { if (navigator.canShare && navigator.canShare({ files:[file] })) { await navigator.share({ files:[file], text:`我在${LEVELS[store.play.level]}模式拿到「${main.name}」！來挑戰 https://gogointop.github.io/pitch-handbook/` }); return; } }
+  catch (e) { if (e.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast("已存成圖片，可以傳到群組");
+}
+document.addEventListener("input", e => { if (e.target.id === "gName") { store.play.name = e.target.value.trim(); save(); } });
 
 /* ---------- 設定 ---------- */
 function viewMore(){
@@ -1063,7 +1232,7 @@ function route(){
 }
 function render(keepScroll){
   const r = route(), y = window.scrollY;
-  const tab = { home:"play", book:"more", c:"more", pitchers:"pitchers", p:"pitchers", opp:"opp", o:"opp", more:"more" }[r.page] || "book";
+  const tab = { home:"play", titles:"play", book:"more", c:"more", pitchers:"pitchers", p:"pitchers", opp:"opp", o:"opp", more:"more" }[r.page] || "book";
   document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.dataset.tab === tab));
   const isBook = r.page === "book" || r.page === "c";
   $("#tools").hidden = !isBook;
@@ -1076,6 +1245,7 @@ function render(keepScroll){
   else if (r.page === "opp") { title = "對手球隊"; html = viewOpps(); }
   else if (r.page === "o") { title = "對手打者"; back = "#/opp"; html = viewOpp(r.id); }
   else if (r.page === "more") { title = "設定"; html = viewMore(); }
+  else if (r.page === "titles") { title = "稱號收藏"; back = "#/"; html = viewTitles(); }
   else if (r.page === "book") { back = "#/more"; html = viewHome(); }
   else { title = "瘋狗野球 配球練習"; html = viewPlay(); }
   $("#title").textContent = title;
