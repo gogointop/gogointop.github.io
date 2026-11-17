@@ -159,9 +159,10 @@ ol.steps li{margin-bottom:4px}
 .bt.l{transform:scaleX(-1)}
 @keyframes sw{0%{transform:rotate(0)}55%{transform:rotate(125deg)}100%{transform:rotate(0)}}
 .zone{display:grid;grid-template-columns:repeat(5,52px);grid-auto-rows:52px;gap:3px}
-.zone button{border-radius:8px;border:1px solid transparent;background:#12161d;font-weight:800;font-size:.8rem;color:#111;padding:0}
-.zone button.z{background:var(--card2);border-color:var(--line)}
-.zone button.sug{border:2px dashed var(--next)}
+.zone button{border-radius:8px;border:1px solid #4a5568;background:#262f3d;font-weight:800;font-size:.8rem;color:#111;padding:0}
+.zone button:active{filter:brightness(1.4)}
+.zone button.z{background:#3d4a5f;border:2px solid #8b99ad}
+.zone button.sug{border:3px dashed var(--next)}
 .zone button.sel{outline:3px solid var(--accent);outline-offset:-1px;background:rgba(242,204,96,.25)}
 .zone button[class*="r-"]{color:#111}
 .zone .r-swstr,.zone .r-called{background:var(--accent)!important}
@@ -923,7 +924,7 @@ function fieldHtml(g, live){
     cells += `<button class="${cls}" ${live ? `data-g="cell" data-x="${x}" data-y="${y}"` : "disabled"} aria-label="${locName(c)}">${here.map(p => p.n).join(",")}</button>`;
   }
   const bat = `<svg class="bt${P.hand === "L" ? " l" : ""}" viewBox="0 0 64 150" aria-hidden="true"><circle cx="30" cy="22" r="10"/><path d="M30 32V86M30 86L18 128M30 86L42 128M30 46L46 54"/><path class="bat${g.anim ? " swing" : ""}" d="M46 54L54 8"/></svg>`;
-  const grid = `<div><div class="zone">${cells}</div><div class="zl"><span>${P.hand === "R" ? "← 內角" : "← 外角"}</span><span>捕手視角</span><span>${P.hand === "R" ? "外角 →" : "內角 →"}</span></div></div>`;
+  const grid = `<div><div class="zone">${cells}</div><div class="zl"><span>${P.hand === "R" ? "← 內角" : "← 外角"}</span><span>亮格＝好球帶・外圈＝壞球</span><span>${P.hand === "R" ? "外角 →" : "內角 →"}</span></div></div>`;
   return `<div class="field">${P.hand === "R" ? bat + grid : grid + bat}</div>`;
 }
 function viewLive(){
