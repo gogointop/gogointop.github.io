@@ -171,6 +171,7 @@ ol.steps li{margin-bottom:4px}
 .zone .r-out{background:var(--cue)!important}
 b.r-swstr,b.r-called,b.r-foul{color:var(--accent)} b.r-ball{color:var(--next)} b.r-hit{color:var(--danger)} b.r-out{color:var(--cue)}
 .zl{display:flex;justify-content:space-between;font-size:.68rem;color:var(--muted);margin-top:3px}
+.miss{color:#f0883e;font-weight:700}
 .rv{border-bottom:1px solid var(--line);padding:8px 2px}
 
 /* 底部分頁 */
@@ -509,7 +510,8 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 
 let store = { pitchers:[], opponents:[], pov:"", play:{ types:["四縫速球","滑球","變速球"], hand:"?", hints:true, pit:"", phand:"R", slot:"tq" }, stats:{ n:0, k:0, bb:0, h:0, o:0, sum:0 } };
 try { Object.assign(store, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
-store.play = Object.assign({ types:["四縫速球","滑球","變速球"], hand:"?", hints:true, pit:"", phand:"R", slot:"tq" }, store.play);
+store.play = Object.assign({ types:["四縫速球","滑球","變速球"], hand:"?", hints:true, pit:"", phand:"R", slot:"tq", level:"am" }, store.play);
+if (!store.statsPro) store.statsPro = { n:0, k:0, bb:0, h:0, o:0, sum:0 };
 let saveOk = true;
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(store)); saveOk = true; } catch (e) { if (saveOk) toast("⚠ 這個瀏覽器無法儲存資料"); saveOk = false; } }
 
@@ -692,6 +694,8 @@ const CUE = {
   weakDrop:"打到了但軟弱：下墜超出他的預期，滾地出局", weakTiming:"打到了但時間點不對：軟弱出局", outNormal:"打進場內：守備接殺出局"
 };
 const STANCE = { close:"站位貼近本壘板", far:"站位遠離本壘板", front:"站在打擊區前緣（靠投手）", back:"站在打擊區後緣（靠捕手）" };
+const LEVELS = { am:"業餘", pro:"職業" };
+const statsOf = () => store.play.level === "pro" ? store.statsPro : store.stats;
 const SLOTS = { over:"上肩", tq:"四分之三", side:"側投", sub:"下勾" };
 const TWO = { protect:"兩好球後握短棒、重心放低", same:"兩好球後動作沒變，照樣大揮" };
 
@@ -700,13 +704,15 @@ const myTypes = cats => store.play.types.filter(t => TYPE(t).cat.some(c => cats.
 
 function newBatter(){
   const hand = store.play.hand === "?" ? (Math.random() < .7 ? "R" : "L") : store.play.hand;
-  const P = { hand, expect: Math.random() < .6 ? "fast" : "slow", adapt: rnd(.1, .4), chase: rnd(.15, .5), contact: rnd(.68, .88),
-    cold: pick(["in", "out"]) + pick(["high", "low"]), two: pick(["protect", "protect", "same", "eye"]) };
-  if (P.two === "eye") P.chase = Math.min(P.chase, .2);
+  const pro = store.play.level === "pro";
+  const P = { hand, expect: Math.random() < .6 ? "fast" : "slow",
+    adapt: pro ? rnd(.45, .75) : rnd(.1, .4), chase: pro ? rnd(.06, .28) : rnd(.15, .5), contact: pro ? rnd(.8, .92) : rnd(.68, .88),
+    cold: pick(["in", "out"]) + pick(["high", "low"]), two: pro ? pick(["protect", "protect", "eye", "eye", "same"]) : pick(["protect", "protect", "same", "eye"]) };
+  if (P.two === "eye") P.chase = Math.min(P.chase, pro ? .12 : .2);
   P.stance = Math.random() < .7 ? (Math.random() < .5 ? (P.cold.startsWith("in") ? "close" : "far") : (P.expect === "slow" ? "front" : "back")) : "";
   game = { prof:P, expect:P.expect, b:0, s:0, pitches:[], sel:{ type: store.play.types.length === 1 ? store.play.types[0] : null, cell:null },
     note:null, twoShown:null, coldSeen:"", ff:0, end:null, anim:false,
-    same: store.play.phand === hand, low: store.play.slot === "sub" ? 2 : store.play.slot === "side" ? 1 : 0 };
+    pro, same: store.play.phand === hand, low: store.play.slot === "sub" ? 2 : store.play.slot === "side" ? 1 : 0 };
   game.advice = advise(game);
 }
 
@@ -803,11 +809,18 @@ function evaluate(a, type, c, b){
 }
 
 function throwPitch(){
-  const g = game, P = g.prof, type = g.sel.type, c = g.sel.cell;
-  if (!type || !c || g.end) return;
+  const g = game, P = g.prof, type = g.sel.type, aim = g.sel.cell;
+  if (!type || !aim || g.end) return;
+  /* 職業模式：25% 機率偏一格（壓邊角、帶外的球比較容易偏） */
+  let c = aim;
+  if (g.pro && Math.random() < (isMid(aim) ? .12 : .25)) {
+    const d = pick([[1, 0], [-1, 0], [0, 1], [0, -1]]);
+    c = { x: clamp(aim.x + d[0], 0, 4), y: clamp(aim.y + d[1], 0, 4) };
+    if (c.x === aim.x && c.y === aim.y) c = aim;
+  }
   const T = TYPE(type), fast = isFast(type), cls = fast ? "fast" : "slow";
   const last = g.pitches[g.pitches.length - 1], prev = g.pitches[g.pitches.length - 2];
-  const z = inZ(c), mid = isMid(c), two = g.s === 2, a = g.advice, ev = evaluate(a, type, c, g.b);
+  const z = inZ(c), mid = isMid(c), two = g.s === 2, a = g.advice, ev = evaluate(a, type, aim, g.b);
   const timing = cls === g.expect, cold = quad(c) === P.cold;
   const same = !!last && last.type === type && last.x === c.x && last.y === c.y;
   const third = same && !!prev && prev.type === type && prev.x === c.x && prev.y === c.y;
@@ -821,17 +834,17 @@ function throwPitch(){
   let ps;
   if (z) {
     ps = (g.b === 3 && g.s === 0) ? .08 : two ? .93 : (g.b === 0 && g.s === 0) ? .42 : .62;
-    if (!two) { if (!timing) ps -= .25; if (excluded) ps -= .3; if (opp) ps -= .15; if (mid && timing) ps += .2; }
+    if (!two) { if (!timing) ps -= g.pro ? .15 : .25; if (excluded) ps -= g.pro ? .15 : .3; if (opp) ps -= g.pro ? .08 : .15; if (mid && timing) ps += .2; }
     if (third) ps += .2;
   } else {
-    ps = P.chase + (two && P.two !== "eye" ? .18 : 0) + (tempting ? .12 : 0) + (bait ? .25 : 0) + (vert && tempting ? .1 : 0) - (far ? .2 : 0)
+    ps = P.chase + (two && P.two !== "eye" ? (g.pro ? .12 : .18) : 0) + (tempting ? (g.pro ? .08 : .12) : 0) + (bait ? (g.pro ? .15 : .25) : 0) + (vert && tempting ? .1 : 0) - (far ? .2 : 0)
       + (g.low && g.same && !fast && c.x === 4 ? .08 : 0) + (g.low === 2 && fast && c.y === 0 ? .08 : 0);
     if (g.b === 3 && g.s < 2) ps *= .3;
   }
   const swing = Math.random() < clamp(ps, .02, .95);
   let res, cue;
   if (swing) {
-    const pc = P.contact + (timing ? 0 : (protect ? -.18 : -.3)) + (z ? 0 : -.22) + (cold ? -.18 : 0) + (vert ? -.12 : 0)
+    const pc = P.contact + (timing ? 0 : (protect ? -.12 : g.pro ? -.2 : -.3)) + (z ? 0 : g.pro ? -.16 : -.22) + (cold ? -.18 : 0) + (vert ? -.12 : 0)
       + (excluded ? -.15 : 0) + (third ? .2 : 0) + (opp ? -.1 : 0) + (mid ? .08 : 0) + (protect ? .08 : 0)
       /* 出手角度：同側更難打、異側更好打；側投／下勾的橫移與上飄 */
       + [.02, .07, .09][g.low] * (g.same ? -1 : 1)
@@ -847,7 +860,7 @@ function throwPitch(){
         res = "foul";
         cue = !timing ? (g.expect === "fast" ? "foulEarly" : "foulLate") : (fast && q >= 2) ? "foulPull" : cold ? "foulCold" : "foulTip";
       } else {
-        const hit = Math.random() < clamp(.12 + .13 * q, .05, .6);
+        const hit = Math.random() < clamp((g.pro ? .17 : .12) + .13 * q, .05, .65);
         res = hit ? "hit" : "out";
         cue = hit ? (q >= 2 ? "hitHard" : "hitSoft") : (T.cat.includes("drop") && c.y >= 3) ? "weakDrop" : !timing ? "weakTiming" : "outNormal";
       }
@@ -855,7 +868,7 @@ function throwPitch(){
   } else if (z) { res = "called"; cue = excluded ? "frozen" : (!timing && !fast) ? "takeNoReact" : !timing ? "takeLate" : opp ? "takeOpp" : "take"; }
   else { res = "ball"; cue = (two && tempting) ? "eyeTake" : (tempting && Math.random() < .35) ? "halfSwing" : "takeBall"; }
 
-  g.pitches.push({ n:g.pitches.length + 1, type, x:c.x, y:c.y, res, cue, swing, b:g.b, s:g.s, grade:ev.grade, evalTxt:ev.txt,
+  g.pitches.push({ n:g.pitches.length + 1, type, x:c.x, y:c.y, miss: c === aim ? "" : locName(aim), res, cue, swing, b:g.b, s:g.s, grade:ev.grade, evalTxt:ev.txt,
     adv:{ next:a.it.next, read:a.it.read, loc:a.loc, types:adviceTypes(a) } });
   g.ff = (res === "foul" && two) ? g.ff + 1 : 0;
   if (res === "swstr" || res === "called") g.s++;
@@ -867,10 +880,11 @@ function throwPitch(){
   else if (g.b === 4) g.end = "bb";
   if (!g.end) {
     if (((swing && !timing) || cue === "takeNoReact" || cue === "takeLate") && Math.random() < P.adapt) { g.expect = cls; g.note = cls === "fast" ? "startEarly" : "startLate"; }
+    else if (g.pro && !timing && last && isFast(last.type) === fast && Math.random() < .6) { g.expect = cls; g.note = cls === "fast" ? "startEarly" : "startLate"; g.read = true; }
     if (g.s === 2 && !g.twoShown && TWO[P.two]) { g.twoShown = P.two; g.twoNew = true; } else g.twoNew = false;
     g.advice = advise(g);
   } else {
-    const st = store.stats; st.n++; st.sum += score(g);
+    const st = statsOf(); st.n++; st.sum += score(g);
     st[g.end === "ks" || g.end === "kl" ? "k" : g.end === "bb" ? "bb" : g.end === "hit" ? "h" : "o"]++;
     save();
   }
@@ -882,6 +896,7 @@ const score = g => Math.round(g.pitches.reduce((n, p) => n + p.grade, 0) / (g.pi
 function observations(g){
   const o = [];
   if (!g.pitches.length) o.push(STANCE[g.prof.stance] || "站位沒有特別的地方");
+  if (g.read) { o.push("同一類球連投兩顆，他開始等它了"); g.read = false; }
   if (g.note === "startEarly") o.push("他調整了：啟動明顯變早");
   if (g.note === "startLate") o.push("他調整了：啟動變晚，把球看久一點");
   if (g.twoNew) o.push(TWO[g.twoShown]);
@@ -895,10 +910,15 @@ function viewPlay(){
   return game.end ? viewDone() : viewLive();
 }
 function viewSetup(){
-  const p = store.play, st = store.stats;
+  const p = store.play, st = statsOf();
   return `<p class="muted small">你配球，模擬打者做反應。每一球之後會告訴你：他露出什麼線索、這球配得如何、下一球怎麼配會更好。</p>
     ${store.pitchers.length ? `<label class="f">帶入已登記的投手</label>
       <select class="in" id="gPit"><option value="">自己勾球種</option>${store.pitchers.map(x => `<option value="${x.id}"${x.id === p.pit ? " selected" : ""}>${esc(x.name || "未命名")}${x.no ? " #" + esc(x.no) : ""}</option>`).join("")}</select>` : ""}
+    <label class="f">難度</label>
+    <div class="seg">${Object.entries(LEVELS).map(([v, t]) => `<button data-g="level" data-v="${v}" class="${p.level === v ? "on" : ""}">${t}</button>`).join("")}</div>
+    <p class="muted small" style="margin-top:6px">${p.level === "pro"
+      ? "職業：打者碰球能力強、很少追壞球、會讀你的配球順序；你的控球也會偶爾偏一格。"
+      : "業餘：打者容易被時間差和誘餌球騙，球一定投到你點的位置。"}</p>
     <div class="two"><div><label class="f">投球手</label>
       <div class="seg"><button data-g="phand" data-v="R" class="${p.phand !== "L" ? "on" : ""}">右投</button><button data-g="phand" data-v="L" class="${p.phand === "L" ? "on" : ""}">左投</button></div></div></div>
     <label class="f">出手角度</label>
@@ -910,7 +930,7 @@ function viewSetup(){
     <label class="f">建議</label>
     <div class="seg"><button data-g="hints" data-v="1" class="${p.hints ? "on" : ""}">每球都給建議</button><button data-g="hints" data-v="" class="${p.hints ? "" : "on"}">打完才檢討</button></div>
     <button class="btn pri" style="margin-top:18px" data-g="start"${p.types.length ? "" : " disabled"}>開始打席</button>
-    ${st.n ? `<p class="muted small">戰績：${st.n} 打席・三振 ${st.k}・保送 ${st.bb}・被安打 ${st.h}・出局 ${st.o}・平均配球分 ${Math.round(st.sum / st.n)}　<a href="#" data-g="resetStats" style="color:var(--muted)">歸零</a></p>` : ""}`;
+    ${st.n ? `<p class="muted small">${LEVELS[p.level]}戰績：${st.n} 打席・三振 ${st.k}・保送 ${st.bb}・被安打 ${st.h}・出局 ${st.o}・平均配球分 ${Math.round(st.sum / st.n)}　<a href="#" data-g="resetStats" style="color:var(--muted)">歸零</a></p>` : ""}`;
 }
 function fieldHtml(g, live){
   const P = g.prof;
@@ -929,6 +949,7 @@ function fieldHtml(g, live){
 function viewLive(){
   const g = game, a = g.advice, last = g.pitches[g.pitches.length - 1], hints = store.play.hints, obs = observations(g);
   const fb = last ? `<div class="fb"><div><span class="muted">第 ${last.n} 球</span> ${esc(last.type)}・${locName(last)} → <b class="r-${last.res}">${RES[last.res]}</b></div>
+      ${last.miss ? `<div class="miss">🎯 控球偏了：瞄準${esc(last.miss)}</div>` : ""}
       <div class="cue1">👁 ${CUE[last.cue]}</div>
       ${hints ? `<div class="ev g${last.grade}">${gradeIcon(last.grade)} ${esc(last.evalTxt)}</div>` : ""}</div>` : "";
   const ob = obs.length ? `<div class="fb"><div class="cue1">👁 ${obs.map(esc).join("；")}</div></div>` : "";
@@ -939,7 +960,7 @@ function viewLive(){
       <div><span class="k">落點</span>${esc(a.loc)}</div>
       ${a.slot ? `<div><span class="k">角度</span>${esc(a.slot)}</div>` : ""}</div>` : "";
   return `<div class="sb"><div class="cnt"><span>B</span>${dots(g.b, 3, "b")}<span>S</span>${dots(g.s, 2, "s")}</div>
-      <div class="who">${g.prof.hand === "R" ? "右打者" : "左打者"}（${g.same ? "同側" : "異側"}）・第 ${g.pitches.length + 1} 球</div><button data-g="quit">放棄</button></div>
+      <div class="who">${g.pro ? "職業・" : ""}${g.prof.hand === "R" ? "右打者" : "左打者"}（${g.same ? "同側" : "異側"}）・第 ${g.pitches.length + 1} 球</div><button data-g="quit">放棄</button></div>
     ${fb}${ob}${adv}${fieldHtml(g, true)}
     <div class="tgrid pt">${store.play.types.map(t => `<button data-g="pt" data-v="${esc(t)}" class="${g.sel.type === t ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
     <button class="btn pri" data-g="throw"${g.sel.type && g.sel.cell ? "" : " disabled"}>${g.sel.type && g.sel.cell ? "投球：" + esc(g.sel.type) + "・" + locName(g.sel.cell) : "先選球種，再點位置"}</button>`;
@@ -959,12 +980,12 @@ function viewDone(){
   if (g.low === 2) tips.push("下勾的高位速球是武器：好球帶上緣的上飄球他很難打紮實");
   if (g.expect !== P.expect) tips.push("打席中他調整過等球的時間點，啟動早晚變了就是訊號");
   const luck = sc >= 75 && !good ? "配球的思路沒問題，結果不好是機率。" : sc < 50 && good ? "結果是好的，但過程有點靠運氣。" : "";
-  return `<div class="principle"><b>打席結果</b><span style="font-size:1.25rem;font-weight:800">${out}</span>　配球分 <b>${sc}</b>
+  return `<div class="principle"><b>打席結果（${LEVELS[g.pro ? "pro" : "am"]}）</b><span style="font-size:1.25rem;font-weight:800">${out}</span>　配球分 <b>${sc}</b>
       <div class="small" style="margin-top:4px">👁 ${CUE[last.cue]}${luck ? "<br>" + luck : ""}</div></div>
     ${fieldHtml(g, false)}
     <div class="sec">逐球檢討</div>
     ${g.pitches.map(p => `<div class="rv"><div><b>${p.n}.</b> <span class="muted">${p.b}-${p.s}</span> ${esc(p.type)}・${locName(p)} → <b class="r-${p.res}">${RES[p.res]}</b> <span class="ev g${p.grade}">${gradeIcon(p.grade)}</span></div>
-      <div class="small muted">👁 ${CUE[p.cue]}</div><div class="small ev g${p.grade}">${esc(p.evalTxt)}</div></div>`).join("")}
+      ${p.miss ? `<div class="small miss">🎯 瞄準${esc(p.miss)}，偏了一格</div>` : ""}<div class="small muted">👁 ${CUE[p.cue]}</div><div class="small ev g${p.grade}">${esc(p.evalTxt)}</div></div>`).join("")}
     <div class="sec">這個打者的真面目</div>
     <div class="adv">${tips.map(t => `<div>・${esc(t)}</div>`).join("")}</div>
     <button class="btn pri" style="margin-top:16px" data-g="start">再來一個打者</button>
@@ -978,13 +999,14 @@ document.addEventListener("click", e => {
   switch (t.dataset.g) {
     case "type": p.types = p.types.includes(v) ? p.types.filter(x => x !== v) : PITCH_TYPES.map(x => x.name).filter(n => n === v || p.types.includes(n)); p.pit = ""; break;
     case "hand": p.hand = v; break;
+    case "level": p.level = v; break;
     case "phand": p.phand = v; break;
     case "slot": p.slot = v; break;
     case "hints": p.hints = !!v; break;
     case "start": if (!p.types.length) return; save(); newBatter(); render(); return;
     case "setup": game = null; render(); return;
     case "quit": if (game.pitches.length && !confirm("放棄這個打席？")) return; game = null; render(); return;
-    case "resetStats": e.preventDefault(); if (!confirm("戰績歸零？")) return; store.stats = { n:0, k:0, bb:0, h:0, o:0, sum:0 }; break;
+    case "resetStats": e.preventDefault(); if (!confirm("戰績歸零？")) return; store[p.level === "pro" ? "statsPro" : "stats"] = { n:0, k:0, bb:0, h:0, o:0, sum:0 }; break;
     case "pt": game.sel.type = v; render(true); return;
     case "cell": game.sel.cell = { x:+t.dataset.x, y:+t.dataset.y }; render(true); return;
     case "throw": throwPitch(); render(); game.anim = false; return;
