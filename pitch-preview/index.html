@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>瘋狗野球 配球練習（3D 預覽）</title>
+<meta name="description" content="你來配球，模擬打者給反應。每一球都告訴你：他露出什麼線索、下一球怎麼配會更好。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="瘋狗野球">
+<meta property="og:title" content="瘋狗野球 配球練習（3D 預覽）">
+<meta property="og:description" content="你來配球，模擬打者給反應。每一球都告訴你：他露出什麼線索、下一球怎麼配會更好。">
+<meta property="og:url" content="https://gogointop.github.io/pitch-preview/">
+<meta property="og:image" content="https://gogointop.github.io/pitch-preview/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="配球練習">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#0d1117; --card:#161b22; --card2:#1c2330; --line:#30363d;
+  --text:#e6edf3; --muted:#9aa4b0; --accent:#f2cc60;
+  --cue:#58a6ff; --read:#e3b341; --next:#3fb950; --danger:#f85149;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:18px;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  line-height:1.55;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+
+/* 頂部 */
+header{position:sticky;top:0;z-index:5;background:rgba(13,17,23,.96);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 14px 10px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1.1rem;min-height:36px}
+.brand .back{background:none;border:0;font-size:1.3rem;padding:4px 10px 4px 0;min-height:44px}
+.tools{padding:10px 14px 4px;max-width:720px;margin:0 auto}
+.search{position:relative}
+.search input{width:100%;height:50px;border-radius:12px;border:1px solid var(--line);background:var(--card);
+  padding:0 46px 0 14px;font-size:1rem;outline:none}
+.search input:focus{border-color:var(--accent)}
+.search button{position:absolute;right:2px;top:2px;width:46px;height:46px;border:0;background:none;color:var(--muted);font-size:1.2rem}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;min-width:58px;height:46px;padding:0 14px;border-radius:23px;border:1px solid var(--line);
+  background:var(--card);font-weight:700;font-variant-numeric:tabular-nums}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#111}
+.pov{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.85rem;color:var(--muted)}
+.pov select{flex:1;height:42px;border-radius:10px;border:1px solid var(--line);background:var(--card);padding:0 10px;color:var(--text)}
+
+main{padding:14px;max-width:720px;margin:0 auto}
+.muted{color:var(--muted)} .small{font-size:.82rem}
+.sec{font-size:.85rem;color:var(--muted);font-weight:700;margin:18px 2px 8px;letter-spacing:.05em}
+
+/* 首頁章節卡 */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chap{display:flex;flex-direction:column;justify-content:space-between;text-align:left;min-height:128px;
+  padding:14px;border-radius:16px;border:1px solid var(--line);background:var(--card)}
+.chap:active{background:var(--card2)}
+.chap .id{font-size:1.7rem;font-weight:800;color:var(--accent);line-height:1}
+.chap .t{font-weight:700;font-size:1.02rem;margin-top:8px}
+.chap .n{font-size:.8rem;color:var(--muted);margin-top:6px}
+.chap.pending{opacity:.45;border-style:dashed}
+.chap.pending .id{color:var(--muted)}
+
+/* 核心原則 */
+.principle{border:1px solid var(--accent);background:rgba(242,204,96,.09);border-radius:14px;padding:12px 14px;margin-bottom:14px}
+.principle b{display:block;color:var(--accent);font-size:.8rem;margin-bottom:2px}
+
+/* 手風琴 */
+details.item{border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:10px;overflow:hidden}
+details.item>summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:60px;padding:10px 14px;font-weight:700;cursor:pointer}
+details.item>summary::-webkit-details-marker{display:none}
+details.item>summary::before{content:"▸";color:var(--muted);transition:transform .15s;flex:0 0 auto}
+details.item[open]>summary::before{transform:rotate(90deg)}
+details.item>summary .tt{flex:1}
+.badge{flex:0 0 auto;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid var(--line);color:var(--accent);font-variant-numeric:tabular-nums}
+.body{padding:2px 14px 14px}
+.part{border-left:4px solid;padding:6px 0 6px 12px;margin-top:10px}
+.part .lab{font-size:.78rem;font-weight:800;letter-spacing:.06em}
+.part.cue{border-color:var(--cue)} .part.cue .lab{color:var(--cue)}
+.part.read{border-color:var(--read)} .part.read .lab{color:var(--read)}
+.part.next{border-color:var(--next);background:rgba(63,185,80,.08);border-radius:0 10px 10px 0;padding-right:10px}
+.part.next .lab{color:var(--next)}
+.part.next .txt{font-size:1.1rem;font-weight:700}
+.part ul{margin:6px 0 0;padding-left:1.1em}
+.part li{margin-top:2px}
+.mine{margin-top:10px;padding:8px 12px;border-radius:10px;background:var(--card2);font-size:.9rem}
+.mine b{color:var(--accent)}
+mark{background:var(--accent);color:#111;border-radius:3px;padding:0 1px}
+.empty{text-align:center;color:var(--muted);padding:36px 10px}
+
+/* 清單與表單 */
+.row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;min-height:64px;padding:12px 14px;margin-bottom:10px;
+  border-radius:14px;border:1px solid var(--line);background:var(--card)}
+.row .no{flex:0 0 auto;min-width:44px;text-align:center;font-weight:800;color:var(--accent);font-size:1.15rem}
+.row .mid{flex:1;min-width:0}
+.row .sub{font-size:.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn{display:block;width:100%;min-height:54px;border-radius:14px;border:1px solid var(--line);background:var(--card);font-weight:700;margin-bottom:10px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#111}
+.btn.danger{color:var(--danger);border-color:#5a2a2a;background:none}
+label.f{display:block;font-size:.8rem;color:var(--muted);margin:12px 0 4px}
+.in{width:100%;height:50px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:0 12px;outline:none}
+textarea.in{height:auto;min-height:96px;padding:10px 12px;line-height:1.5}
+.in:focus{border-color:var(--accent)}
+.two{display:flex;gap:10px}.two>*{flex:1;min-width:0}
+.seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{flex:1;height:48px;min-width:48px;border:0;background:var(--card);font-weight:700;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#111}
+.prow{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.prow select{flex:1;min-width:0;height:50px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:0 8px}
+.prow input{width:74px;height:50px;border-radius:12px;border:1px solid var(--line);background:var(--card);text-align:center;padding:0 4px}
+.ic{flex:0 0 auto;width:48px;height:50px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:1.1rem}
+.ic.on{background:var(--accent);border-color:var(--accent);color:#111}
+.bat{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px;margin-bottom:10px}
+.bat .top{display:flex;gap:8px;align-items:center}
+.bat .top input{width:70px;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);text-align:center;font-weight:800;color:var(--accent)}
+.bat .top .seg{flex:1}
+.bat .note{margin-top:8px;height:44px;background:var(--bg)}
+.tag{display:inline-block;font-size:.78rem;padding:1px 8px;border-radius:9px;border:1px solid var(--line);margin:2px 4px 0 0}
+.tag.k{border-color:var(--accent);color:var(--accent)}
+ol.steps{padding-left:1.3em;margin:6px 0 0}
+ol.steps li{margin-bottom:4px}
+
+/* 練習 */
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tgrid button{min-height:50px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:700;font-size:.9rem;padding:4px}
+.tgrid button.on{background:var(--accent);border-color:var(--accent);color:#111}
+.tgrid.pt{margin:12px 0}
+.btn:disabled{opacity:.45}
+.sb{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sb .cnt{display:flex;align-items:center;gap:5px;font-weight:800}
+.sb .cnt span{margin-left:6px;color:var(--muted);font-size:.85rem}
+.sb .cnt i{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);display:inline-block}
+.sb .cnt i.b{background:var(--next);border-color:var(--next)} .sb .cnt i.s{background:var(--accent);border-color:var(--accent)}
+.sb .who{flex:1;text-align:right;font-size:.85rem;color:var(--muted)}
+.sb button{height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--muted);font-size:.8rem}
+.fb{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:.92rem}
+.fb .cue1{color:var(--cue);font-weight:700;margin-top:2px}
+.fb .cue1:first-child{margin-top:0}
+.ev{margin-top:2px}.ev.g2{color:var(--next)}.ev.g1{color:var(--read)}.ev.g0{color:var(--danger)}
+.adv{border:1px solid var(--next);background:rgba(63,185,80,.08);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:.92rem}
+.adv .lab{color:var(--next);font-weight:800;font-size:.8rem;margin-bottom:2px}
+.adv .k{display:inline-block;min-width:2.6em;color:var(--muted);font-size:.78rem;margin-right:6px}
+.field{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 0}
+.bt{width:54px;flex:0 0 auto;stroke:var(--muted);stroke-width:5;stroke-linecap:round;fill:none}
+.bt circle{fill:var(--muted);stroke:none}
+.bt .bat{stroke:var(--accent);stroke-width:6;transform-origin:46px 54px}
+.bt .bat.swing{animation:sw .45s ease-out}
+.bt.l{transform:scaleX(-1)}
+@keyframes sw{0%{transform:rotate(0)}55%{transform:rotate(125deg)}100%{transform:rotate(0)}}
+.zone{display:grid;grid-template-columns:repeat(5,52px);grid-auto-rows:52px;gap:3px}
+.zone button{border-radius:8px;border:1px solid #56627a;background:#2c3646;font-weight:800;font-size:.8rem;color:#111;padding:0}
+.zone button:active{filter:brightness(1.4)}
+.zone button.z{background:#3d4a5f;border:2px solid #8b99ad}
+.zone button.sel{outline:3px solid var(--accent);outline-offset:-1px;background:rgba(242,204,96,.25)}
+.zone button[class*="r-"]{color:#111}
+.zone .r-swstr,.zone .r-called{background:var(--accent)!important}
+.zone .r-foul{background:#b9a56a!important}
+.zone .r-ball{background:var(--next)!important}
+.zone .r-hit{background:var(--danger)!important}
+.zone .r-out{background:var(--cue)!important}
+b.r-swstr,b.r-called,b.r-foul{color:var(--accent)} b.r-ball{color:var(--next)} b.r-hit{color:var(--danger)} b.r-out{color:var(--cue)}
+.zl{display:flex;justify-content:space-between;font-size:.68rem;color:var(--muted);margin-top:3px}
+.miss{color:#f0883e;font-weight:700}
+.tcard{border:2px solid var(--accent);border-radius:16px;padding:14px;background:linear-gradient(160deg,rgba(242,204,96,.12),var(--card) 60%)}
+.tc-top{display:flex;align-items:center;gap:14px}
+.tcard .ti{font-size:3rem;line-height:1}
+.tcard .tl{font-size:.75rem;color:var(--muted);font-weight:700}
+.tcard .tn{font-size:1.5rem;font-weight:900;color:var(--accent)}
+.tcard .td{font-size:.85rem;color:var(--muted)}
+.tstats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0 6px;text-align:center;font-size:.72rem;color:var(--muted)}
+.tstats b{display:block;font-size:1.1rem;color:var(--text)}
+.trow{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:8px}
+.trow .ti{font-size:2rem;flex:0 0 44px;text-align:center}
+.trow.locked{opacity:.55}
+.trow.cur{border-color:var(--accent)}
+.unlock{display:flex;gap:12px;align-items:center;border:2px solid var(--accent);background:rgba(242,204,96,.15);border-radius:14px;padding:10px 14px;margin-bottom:10px;animation:pop .5s ease-out}
+.unlock span{font-size:2.2rem}
+@keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
+.stage3d{display:flex;justify-content:center;margin:6px 0;touch-action:manipulation}
+#c3d{border-radius:14px;border:1px solid var(--line);max-width:100%}
+.rv{border-bottom:1px solid var(--line);padding:8px 2px}
+
+/* 底部分頁 */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:rgba(22,27,34,.98);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)}
+nav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:64px;text-decoration:none;color:var(--muted);font-size:.72rem;font-weight:700;gap:2px}
+nav a span{font-size:1.35rem;line-height:1}
+nav a.on{color:var(--accent)}
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#e6edf3;color:#111;
+  padding:8px 16px;border-radius:20px;font-size:.9rem;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;max-width:90vw}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><button class="back" id="back" hidden aria-label="返回">←</button><span id="title">瘋狗野球 配球練習 3D</span></div>
+</header>
+<div class="tools" id="tools">
+    <div class="search">
+      <input id="q" type="search" inputmode="search" autocomplete="off" placeholder="搜尋：內角、揮空、1-2…" aria-label="搜尋">
+      <button id="qx" aria-label="清除搜尋" hidden>✕</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="pov" id="pov" hidden><span>投手視角</span><select id="povSel" aria-label="投手視角"></select></div>
+</div>
+
+<main id="view"></main>
+
+<nav>
+  <a href="#/" data-tab="play"><span>🎯</span>練習</a>
+  <a href="#/pitchers" data-tab="pitchers"><span>⚾</span>投手</a>
+  <a href="#/opp" data-tab="opp"><span>🧢</span>對手</a>
+  <a href="#/more" data-tab="more"><span>⚙️</span>設定</a>
+</nav>
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   資料區：之後新增章節／條目只改這裡
+   條目欄位：
+     t      標題
+     group  （選填）同章內的小分類
+     counts （選填）適用球數，例 ["1-2","0-2"]；不填＝通用
+     cue    線索      read  判讀      next  下一球建議
+     branch （選填）建議底下的分支／補充
+     want   （選填）建議用到的球路類型：fast 速球系／breaking 滑曲系／offspeed 變速系／drop 下墜系
+            選了「投手視角」時，會列出該投手符合的球種
+   ============================================================ */
+const DATA = [
+  { id:"A", title:"淺球數開局",
+    principle:"淺球數不是搶數量優勢，是製造資訊不對稱。",
+    items:[
+      { t:"0-0 第一球：建立資料", counts:["0-0"],
+        cue:"打席第一球，雙方都還沒有情報",
+        read:"這球價值在情報，不在搶好球",
+        next:"給邊角好球，不要中間直球",
+        branch:["打了 → 拿到他對邊角的反應","看了 → 免費好球＋選球範圍資訊"] },
+      { t:"1-0 壞球後：打者進入找球狀態", counts:["1-0"], want:["breaking","offspeed"],
+        cue:"第一球壞球，打者開始找球打",
+        read:"注意力鎖在剛剛壞球的位置／球種附近，保護模式還沒啟動",
+        next:"給反方向（內角換外角）、同速度帶的球，製造位置差",
+        branch:["適合用變化球騙揮空"] },
+      { t:"0-1 好球後：打者開始縮小範圍", counts:["0-1"],
+        cue:"第一球好球，打者開始縮小範圍",
+        read:"他會排除「剛剛那顆應該不會再來」的選項",
+        next:"同球種、同位置再來一次",
+        branch:["怕太明顯 → 同位置不同球種，利用視覺殘留造成時間誤差"] }
+    ]},
+  { id:"B", title:"1-1 之後的讀心階段",
+    principle:"每一球都在打者的「記憶」上做文章，利用或打破他記得、信任、排除的東西。",
+    items:[
+      { t:"打者的腦內劇本", counts:["1-1"],
+        cue:"他已看過兩球：球種順序、位置變化，加上對你配球習慣的印象",
+        read:"他正依這些線索推演下一球的劇本",
+        next:"製造劇本裡沒有的選項",
+        branch:["最有效：換「節奏」","或「同球種、不同層級的位置」","不一定要換球種"] },
+      { t:"打法 A：誘導出棒", counts:["1-1"], want:["breaking","fast"],
+        cue:"想確認他的出棒 timing",
+        read:"出手點與前面好球一致，差異只在最後 20 公分，他很難及時分辨",
+        next:"給看起來像好球、但會出去的球",
+        branch:["外角滑球外飄","內角速球內偏"] },
+      { t:"打法 B：再進攻好球帶", counts:["1-1"],
+        cue:"前兩球他都沒揮棒",
+        read:"可能在等好球",
+        next:"再塞一顆好球，測試他的耐心極限" },
+      { t:"1-2：誘餌球", counts:["1-2"],
+        cue:"球數 1-2",
+        read:"資訊最不對稱的時刻：你有容錯，他沒有",
+        next:"沿用前面出現過的球種／位置，加大偏移量",
+        branch:["例：內角好球邊緣，再往內一點變壞球","打者因為記憶，更容易出棒"] }
+    ]},
+  { id:"C", title:"揮棒後的反應線索",
+    items:[
+      { group:"揮空殘影", t:"揮棒偏高、偏前", want:["offspeed","breaking"],
+        cue:"揮空，棒子偏高、偏前",
+        read:"他預期的是速球",
+        next:"變速球或滑球，騙時間差" },
+      { group:"揮空殘影", t:"揮棒拖很後面", want:["fast"],
+        cue:"揮空，揮棒拖很後面",
+        read:"在等變化球，但球速沒抓準",
+        next:"回速球，打時間差" },
+      { group:"揮空殘影", t:"重心整個前倒", want:["breaking"],
+        cue:"揮空，重心整個前倒",
+        read:"被外角變化球騙到",
+        next:"同方向、同位置再來一次" },
+      { group:"揮空後眼神／頭部", t:"頭轉向追球",
+        cue:"揮空後頭轉向追球",
+        read:"看到了但反應慢，問題在球速",
+        next:"同方向，加快節奏連續壓迫" },
+      { group:"揮空後眼神／頭部", t:"頭沒追視／搖頭",
+        cue:"揮空後頭沒追視，或搖頭",
+        read:"完全沒看到，出手點被騙",
+        next:"同出手點可再騙，但換方向避免太明顯" },
+      { group:"半揮（中途停棒）", t:"半揮：辨識強、反應時間不夠", want:["offspeed","fast"],
+        cue:"半揮，中途停棒",
+        read:"辨識力強，但反應時間不夠",
+        next:"不用同球種測試，用速度差而非球種差" },
+      { group:"半揮（中途停棒）", t:"半揮停在外角",
+        cue:"半揮，棒子停在外角",
+        read:"選球範圍大，邊角空間被壓縮",
+        next:"往更極端的角度挑戰" },
+      { group:"打到但軟弱／擦棒", t:"打到球的下緣", want:["drop"],
+        cue:"打到但軟弱或擦棒，打在球的下緣",
+        read:"尾勁／下墜超出他的預期",
+        next:"同類下墜球可以重複用" },
+      { group:"打到但軟弱／擦棒", t:"打到球的上緣", want:["drop","fast"],
+        cue:"打到但軟弱或擦棒，打在球的上緣",
+        read:"球比他預期的低",
+        next:"下一球更低",
+        branch:["或反向給高球，製造垂直差"] }
+    ]},
+  { id:"D", title:"上下高低策略",
+    principle:"垂直這條路沒上鉤，就先換水平（內外角）；等打者注意力被左右拉開，再回來用垂直。",
+    items:[
+      { t:"開局測裁判四個角",
+        cue:"比賽剛開始，還不知道裁判的好球帶",
+        read:"一次收集兩種情報：裁判好球帶範圍、打者對高低球的反應",
+        next:"開局把四個角都測過",
+        branch:["哪個角有撿，決勝球就壓那裡"] },
+      { t:"高位速球的價值：鋪墊", want:["fast","drop"],
+        cue:"準備用低球（尤其下墜系）決勝",
+        read:"高位速球讓視覺起點上移，下一球給低球會產生視線修正的時間差",
+        next:"先投高位速球，為下一球鋪墊垂直落差" },
+      { t:"高球的有效高度很窄", want:["fast"],
+        cue:"要投高位速球時",
+        read:"太高打者直接放掉，資訊價值歸零",
+        next:"貼著好球帶上緣，看起來可能進、可能不進" },
+      { t:"決勝高速球沒揮：球數仍有利", counts:["1-2","0-2"],
+        cue:"決勝高速球沒進帶、打者沒揮；球數仍有利（1-2、0-2）",
+        read:"他可能鎖定高球、看穿你最後會拉高的習慣，或那球太高太明顯",
+        next:"不急著回好球帶：同高度、內外角換邊再來一顆",
+        branch:["用來測試他是真的鎖定，還是那球太明顯"] },
+      { t:"決勝高速球沒揮：球數平衡或落後", counts:["2-2","3-2"],
+        cue:"決勝高速球沒進帶、打者沒揮；球數平衡或落後（2-2、3-2）",
+        read:"他剛建立「這球是壞球」的印象",
+        next:"給低位、而且裁判會撿的角",
+        branch:["回到開局蒐集的裁判資料","利用他剛建立的壞球印象"] },
+      { t:"核心調整：垂直沒上鉤先換水平",
+        cue:"垂直（高低）這條路，打者沒上鉤",
+        read:"連續打垂直效果差，他的注意力還停在高低",
+        next:"先換水平方向（內外角）",
+        branch:["等注意力被左右拉開，再用垂直"] }
+    ]},
+  { id:"E", title:"等球時機線索",
+    principle:"先看出他在等什麼速度，再給他另一個速度。",
+    items:[
+      { t:"啟動偏早", want:["offspeed","breaking"],
+        cue:"抬腳或啟動明顯偏早",
+        read:"抓的是速球的時間點",
+        next:"變速球或慢曲球，讓他提前把力量用掉" },
+      { t:"啟動偏晚、速球被擠到", want:["fast"],
+        cue:"啟動偏晚，速球被擠到、打成反方向界外",
+        read:"跟不上速球",
+        next:"繼續速球，往內角高處壓",
+        branch:["不要投變化球幫他抓到時間"] },
+      { t:"速球被拉成強勁界外", want:["offspeed"],
+        cue:"把速球拉成強勁的拉回方向界外",
+        read:"速球時間點已經抓到，甚至太早",
+        next:"換慢的球，或把速球放到外角" },
+      { t:"第一球好球完全不動",
+        cue:"第一球好球完全不動",
+        read:"習慣先看一球，或只等特定球種",
+        next:"之後打席第一球大膽搶好球" },
+      { t:"對變化球完全沒反應", want:["breaking"],
+        cue:"對變化球完全沒反應，身體不動",
+        read:"鎖定速球，放掉其他球",
+        next:"用變化球進帶搶好球數",
+        branch:["速球只放邊角或壞球"] },
+      { t:"兩好球後連續界外纏鬥", counts:["0-2","1-2","2-2","3-2"], want:["offspeed"],
+        cue:"兩好球後連續界外纏鬥",
+        read:"已經跟上這個速度帶",
+        next:"換速度帶，不要只換位置" }
+    ]},
+  { id:"F", title:"兩好球後動作變化",
+    principle:"兩好球後他改了什麼，就代表他在保護什麼；攻他沒保護的地方。",
+    items:[
+      { t:"握短棒、重心放低", counts:["0-2","1-2","2-2","3-2"], want:["drop"],
+        cue:"兩好球後握短棒、重心放低、步幅縮小",
+        read:"進入保護模式，以碰到球為主，長打威脅下降",
+        next:"敢攻好球帶邊緣",
+        branch:["他的揮棒範圍變大，用下墜球引誘"] },
+      { t:"往本壘板靠近", counts:["0-2","1-2","2-2","3-2"], want:["fast"],
+        cue:"兩好球後往本壘板靠近",
+        read:"想保護外角",
+        next:"內角速球擠他" },
+      { t:"動作沒變，照樣大揮", counts:["0-2","1-2","2-2","3-2"], want:["drop","fast"],
+        cue:"兩好球後動作完全沒變，照樣大揮",
+        read:"不調整的類型，容易揮空",
+        next:"好球帶外的決勝球",
+        branch:["低的變化球","或高的速球"] },
+      { t:"帶內的球都被破壞", counts:["0-2","1-2","2-2","3-2"],
+        cue:"兩好球後，帶內的球都被破壞成界外",
+        read:"好球帶內他碰得到",
+        next:"不要再往帶內塞，加大偏移量或換速度" },
+      { t:"邊角誘餌球都不揮", counts:["0-2","1-2","2-2","3-2"], want:["breaking"],
+        cue:"兩好球後，邊角的誘餌球都不揮",
+        read:"選球好，誘餌無效",
+        next:"用進帶的變化球，搶站著不動的三振" },
+      { t:"啟動變晚，把球看久", counts:["0-2","1-2","2-2","3-2"], want:["fast"],
+        cue:"兩好球後啟動變晚，把球看久一點",
+        read:"設定打反方向",
+        next:"內角速球，讓他來不及" }
+    ]},
+  { id:"G", title:"站位調整線索",
+    principle:"站位是打者自己公開的計畫；他往哪裡移，另一邊就空出來。",
+    items:[
+      { t:"貼近本壘板", want:["fast"],
+        cue:"站位貼近本壘板",
+        read:"想打外角，或外角是弱點",
+        next:"先用內角速球逼退，再回外角" },
+      { t:"遠離本壘板", want:["breaking"],
+        cue:"站位遠離本壘板",
+        read:"怕內角，或想把手伸直",
+        next:"外角邊緣、外角往外跑的變化球" },
+      { t:"站打擊區前緣", want:["fast"],
+        cue:"站打擊區前緣（靠投手）",
+        read:"想在變化球轉彎前打到",
+        next:"速球，尤其高位",
+        branch:["他的反應時間變短"] },
+      { t:"站打擊區後緣", want:["drop"],
+        cue:"站打擊區後緣（靠捕手）",
+        read:"想多看一點，可能跟不上速球",
+        next:"下墜球：到他面前落差更大",
+        branch:["速球照樣能壓"] },
+      { t:"開放式站姿",
+        cue:"開放式站姿",
+        read:"想看清楚球、防內角",
+        next:"外角遠端" },
+      { t:"封閉式站姿", want:["fast"],
+        cue:"封閉式站姿，前腳踏向本壘板",
+        read:"主攻外角，內角轉不過來",
+        next:"內角速球" },
+      { t:"打席中途移動站位",
+        cue:"打席中途移動站位",
+        read:"他在針對上一球調整",
+        next:"給上一球的反面",
+        branch:["例：往前站防變化球 → 給速球"] }
+    ]},
+  { id:"H", title:"象限策略整合",
+    principle:"不是每球都要換象限，而是讓每一球都替下一球鋪路。",
+    items:[
+      { t:"對角線：內高之後外低", want:["breaking"],
+        cue:"剛投過內角高的速球",
+        read:"他的視線和身體都被拉向內、向上",
+        next:"對角線：外角低的變化球",
+        branch:["距離差和高度差最大"] },
+      { t:"同象限連兩球就換",
+        cue:"同一象限已連投兩球",
+        read:"視線已經適應那個位置",
+        next:"換到對角象限，或同位置換速度" },
+      { t:"冷區留給決勝球",
+        cue:"某個象限他揮空或打得軟弱",
+        read:"那是他的冷區",
+        next:"留給決勝球用",
+        branch:["不要在淺球數就用完"] },
+      { t:"裁判的角 × 打者冷區",
+        cue:"裁判會撿的角和打者的冷區重疊",
+        read:"最高價值的位置",
+        next:"兩好球後壓這裡",
+        branch:["接章節 D 的開局測角"] },
+      { t:"球數落後必須進帶", counts:["2-0","3-1"], want:["breaking"],
+        cue:"球數落後（2-0、3-1），必須進帶",
+        read:"打者鎖定紅中速球",
+        next:"進帶，但放低的象限",
+        branch:["或投有把握進帶的變化球"] },
+      { t:"同側對決", want:["breaking","fast"],
+        cue:"同側對決（右投對右打、左投對左打）",
+        read:"外角往外跑的球最難打",
+        next:"主軸是外角滑球",
+        branch:["內角速球當配角"] },
+      { t:"異側對決", want:["offspeed","breaking"],
+        cue:"異側對決（右投對左打、左投對右打）",
+        read:"滑球會跑進他的揮棒路徑",
+        next:"變速球往外角逃",
+        branch:["滑球只投到他後腳邊"] }
+    ]}
+];
+
+/* 球數篩選鈕（「其他」＝不在前五個裡的球數） */
+const COUNTS = ["0-0","1-0","0-1","1-1","1-2"];
+
+/* 球種清單：cat 用來對應條目的 want */
+const PITCH_TYPES = [
+  { name:"四縫速球", cat:["fast"] },
+  { name:"二縫速球", cat:["fast"] },
+  { name:"伸卡球",   cat:["fast"] },
+  { name:"卡特球",   cat:["fast","breaking"] },
+  { name:"噴射球",   cat:["fast"] },
+  { name:"上飄速球", cat:["fast"] },
+  { name:"滑球",     cat:["breaking"] },
+  { name:"橫掃球",   cat:["breaking"] },
+  { name:"滑曲球",   cat:["breaking","drop"] },
+  { name:"曲球",     cat:["breaking","drop"] },
+  { name:"彈指曲球", cat:["breaking","drop"] },
+  { name:"慢速曲球", cat:["breaking","drop"] },
+  { name:"變速球",   cat:["offspeed","drop"] },
+  { name:"圓圈變速球", cat:["offspeed","drop"] },
+  { name:"指叉球",   cat:["offspeed","drop"] },
+  { name:"快速指叉球", cat:["offspeed","drop"] },
+  { name:"螺旋球",   cat:["offspeed","breaking"] },
+  { name:"掌心球",   cat:["offspeed"] },
+  { name:"蝴蝶球",   cat:["offspeed"] },
+  { name:"小便球",   cat:["offspeed"] },
+  { name:"其他",     cat:[] }
+];
+const CAT_LABEL = { fast:"速球系", breaking:"滑曲系", offspeed:"變速系", drop:"下墜系" };
+
+/* ============================================================
+   程式區
+   ============================================================ */
+const KEY = "maddog-pitch-preview";
+try { if (!localStorage.getItem(KEY) && localStorage.getItem("maddog-pitch-v1")) localStorage.setItem(KEY, localStorage.getItem("maddog-pitch-v1")); } catch (e) {}
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+let store = { pitchers:[], opponents:[], pov:"", play:{ types:["四縫速球","滑球","變速球"], hand:"?", hints:true, pit:"", phand:"R", slot:"tq" }, stats:{ n:0, k:0, bb:0, h:0, o:0, sum:0 } };
+try { Object.assign(store, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+store.play = Object.assign({ types:["四縫速球","滑球","變速球"], hand:"?", hints:true, pit:"", phand:"R", slot:"tq", level:"am" }, store.play);
+for (const k of ["statsPro", "statsPain"]) if (!store[k]) store[k] = { n:0, k:0, bb:0, h:0, o:0, sum:0 };
+if (!store.hist) {  /* 稱號用的逐打席紀錄；更新前的戰績保留成舊總數 */
+  store.hist = { am:[], pro:[], pain:[] };
+  store.legacy = { am:{ ...store.stats }, pro:{ ...store.statsPro }, pain:{ ...store.statsPain } };
+}
+if (!store.titles) store.titles = {};
+let saveOk = true;
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(store)); saveOk = true; } catch (e) { if (saveOk) toast("⚠ 這個瀏覽器無法儲存資料"); saveOk = false; } }
+
+const ui = { q:"", count:"" };
+let toastT;
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1800); }
+
+/* ---------- 秘笈 ---------- */
+function hl(text){
+  const s = String(text ?? ""), q = ui.q.trim();
+  if (!q) return esc(s);
+  const low = s.toLowerCase(), ql = q.toLowerCase();
+  let out = "", i = 0, j;
+  while ((j = low.indexOf(ql, i)) !== -1) { out += esc(s.slice(i, j)) + "<mark>" + esc(s.slice(j, j + q.length)) + "</mark>"; i = j + q.length; }
+  return out + esc(s.slice(i));
+}
+function itemText(ch, it){
+  return [ch.title, it.group, it.t, it.cue, it.read, it.next, ...(it.branch || []), ...(it.counts || []), ...(it.want || []).map(w => CAT_LABEL[w])].join(" ").toLowerCase();
+}
+function matchCount(it){
+  if (!ui.count) return true;
+  const cs = it.counts || [];
+  return ui.count === "其他" ? cs.some(c => !COUNTS.includes(c)) : cs.includes(ui.count);
+}
+function povPitcher(){ return store.pitchers.find(p => p.id === store.pov); }
+function pitchLabel(x){ return esc(x.type) + (x.kmh ? " " + esc(x.kmh) : "") + (x.out ? " ★" : ""); }
+function mineHtml(it){
+  const p = povPitcher();
+  if (!p || !it.want) return "";
+  const hit = (p.pitches || []).filter(x => (PITCH_TYPES.find(t => t.name === x.type)?.cat || []).some(c => it.want.includes(c)));
+  const want = it.want.map(w => CAT_LABEL[w]).join("、");
+  return `<div class="mine"><b>${esc(p.name || "未命名")}</b> 可用（${want}）：${hit.length ? hit.map(pitchLabel).join("、") : '<span class="muted">目前沒有登記這類球種</span>'}</div>`;
+}
+function itemHtml(it, open){
+  const badges = (it.counts || []).map(c => `<span class="badge">${esc(c)}</span>`).join("");
+  const br = it.branch ? "<ul>" + it.branch.map(b => `<li>${hl(b)}</li>`).join("") + "</ul>" : "";
+  return `<details class="item"${open ? " open" : ""}>
+    <summary><span class="tt">${hl(it.t)}</span>${badges}</summary>
+    <div class="body">
+      <div class="part cue"><div class="lab">👁 線索</div><div class="txt">${hl(it.cue)}</div></div>
+      <div class="part read"><div class="lab">🧠 判讀</div><div class="txt">${hl(it.read)}</div></div>
+      <div class="part next"><div class="lab">🎯 下一球建議</div><div class="txt">${hl(it.next)}</div>${br}</div>
+      ${mineHtml(it)}
+    </div></details>`;
+}
+function groupedHtml(items, open){
+  let html = "", g = null;
+  for (const it of items) {
+    if ((it.group || "") !== g) { g = it.group || ""; if (g) html += `<div class="sec">${hl(g)}</div>`; }
+    html += itemHtml(it, open);
+  }
+  return html;
+}
+function viewHome(){
+  return `<div class="grid">` + DATA.map(ch => ch.pending
+    ? `<div class="chap pending"><div><div class="id">${esc(ch.id)}</div><div class="t">${esc(ch.title)}</div></div><div class="n">建置中</div></div>`
+    : `<button class="chap" data-go="#/c/${esc(ch.id)}"><div><div class="id">${esc(ch.id)}</div><div class="t">${esc(ch.title)}</div></div><div class="n">${ch.items.length} 條</div></button>`
+  ).join("") + `</div>
+  <p class="muted small" style="margin-top:16px">每條固定三段：<span style="color:var(--cue)">線索</span> → <span style="color:var(--read)">判讀</span> → <span style="color:var(--next)">下一球建議</span>。這是學習參考，場上仍以臨場應變為主。</p>`;
+}
+function viewChapter(id){
+  const ch = DATA.find(c => c.id === id && !c.pending);
+  if (!ch) return viewHome();
+  return (ch.principle ? `<div class="principle"><b>💡 核心原則</b>${esc(ch.principle)}</div>` : "") + groupedHtml(ch.items, false);
+}
+function viewResults(){
+  const q = ui.q.trim().toLowerCase();
+  let n = 0, html = "";
+  for (const ch of DATA) {
+    const hit = ch.items.filter(it => matchCount(it) && (!q || itemText(ch, it).includes(q)));
+    if (!hit.length) continue;
+    n += hit.length;
+    html += `<div class="sec">${esc(ch.id)}　${esc(ch.title)}</div>` + hit.map(it => itemHtml(it, true)).join("");
+  }
+  const cond = [ui.count && "球數 " + ui.count, ui.q.trim() && "「" + ui.q.trim() + "」"].filter(Boolean).join(" ＋ ");
+  return `<p class="muted small">${esc(cond)}：${n} 條</p>` + (html || `<div class="empty">找不到符合的條目<br><span class="small">通用條目（沒有標球數）不會出現在球數篩選裡</span></div>`);
+}
+
+/* ---------- 投手 ---------- */
+function viewPitchers(){
+  return `<button class="btn pri" data-act="addPitcher">＋ 新增投手</button>` +
+    (store.pitchers.length ? store.pitchers.map(p => `<button class="row" data-go="#/p/${p.id}">
+      <div class="no">${esc(p.no || "–")}</div>
+      <div class="mid"><div><b>${esc(p.name || "未命名")}</b> <span class="muted small">${p.hand === "L" ? "左投" : "右投"}・${SLOTS[p.slot || "tq"]}</span></div>
+      <div class="sub">${(p.pitches || []).length ? p.pitches.map(pitchLabel).join("・") : "尚未登記球種"}</div></div><div class="muted">›</div></button>`).join("")
+    : `<div class="empty">還沒有投手<br><span class="small">登記球種和球速後，秘笈裡可以切換「投手視角」，看每條建議對應到他的哪幾顆球</span></div>`);
+}
+function viewPitcher(id){
+  const p = store.pitchers.find(x => x.id === id);
+  if (!p) return viewPitchers();
+  const opts = t => PITCH_TYPES.map(x => `<option${x.name === t ? " selected" : ""}>${esc(x.name)}</option>`).join("");
+  return `<div class="two">
+      <div><label class="f">名字</label><input class="in" data-f="name" value="${esc(p.name)}" placeholder="例：阿明"></div>
+      <div style="flex:0 0 96px"><label class="f">背號</label><input class="in" data-f="no" inputmode="numeric" value="${esc(p.no)}"></div>
+    </div>
+    <label class="f">投球手</label>
+    <div class="seg"><button data-act="hand" data-v="R" class="${p.hand !== "L" ? "on" : ""}">右投</button><button data-act="hand" data-v="L" class="${p.hand === "L" ? "on" : ""}">左投</button></div>
+    <label class="f">出手角度</label>
+    <div class="seg">${Object.entries(SLOTS).map(([v, t]) => `<button data-act="slot" data-v="${v}" class="${(p.slot || "tq") === v ? "on" : ""}">${t}</button>`).join("")}</div>
+    <label class="f">球種／球速（km/h）／★ 決勝球</label>
+    ${(p.pitches || []).map((x, i) => `<div class="prow">
+      <select data-pf="type" data-i="${i}" aria-label="球種">${opts(x.type)}</select>
+      <input data-pf="kmh" data-i="${i}" inputmode="numeric" placeholder="球速" value="${esc(x.kmh)}" aria-label="球速">
+      <button class="ic${x.out ? " on" : ""}" data-act="out" data-i="${i}" aria-label="決勝球">★</button>
+      <button class="ic" data-act="delPitch" data-i="${i}" aria-label="刪除球種">✕</button></div>`).join("")}
+    <button class="btn" data-act="addPitch">＋ 新增球種</button>
+    <label class="f">備註（控球特性、習慣、近況…）</label>
+    <textarea class="in" data-f="note">${esc(p.note)}</textarea>
+    <p class="muted small" style="margin:10px 0 16px">修改會自動儲存</p>
+    <button class="btn danger" data-act="delPitcher">刪除這位投手</button>`;
+}
+
+/* ---------- 對手 ---------- */
+const BAT = { R:"右打", L:"左打", S:"左右開弓" };
+function viewOpps(){
+  return `<button class="btn pri" data-act="addOpp">＋ 新增對手球隊</button>` +
+    (store.opponents.length ? store.opponents.map(o => {
+      const b = o.batters || [], l = b.filter(x => x.bat === "L").length, s = b.filter(x => x.bat === "S").length;
+      return `<button class="row" data-go="#/o/${o.id}"><div class="mid"><div><b>${esc(o.name || "未命名球隊")}</b></div>
+        <div class="sub">${b.length} 人${b.length ? `・左打 ${l}・左右開弓 ${s}` : ""}</div></div><div class="muted">›</div></button>`;
+    }).join("") : `<div class="empty">還沒有對手資料<br><span class="small">拿到打序單後，可以一次貼上整份名單</span></div>`);
+}
+function viewOpp(id){
+  const o = store.opponents.find(x => x.id === id);
+  if (!o) return viewOpps();
+  return `<label class="f">球隊名稱</label><input class="in" data-of="name" value="${esc(o.name)}" placeholder="例：河濱猛虎">
+    <div class="sec">打者（依打序）</div>
+    ${(o.batters || []).map((b, i) => `<div class="bat">
+      <div class="top"><input data-bf="no" data-i="${i}" inputmode="numeric" placeholder="背號" value="${esc(b.no)}" aria-label="背號">
+        <div class="seg">${["R","L","S"].map(v => `<button data-act="bat" data-i="${i}" data-v="${v}" class="${b.bat === v ? "on" : ""}">${v === "R" ? "右" : v === "L" ? "左" : "兩"}</button>`).join("")}</div>
+        <button class="ic" data-act="delBat" data-i="${i}" aria-label="刪除打者">✕</button></div>
+      <input class="in note" data-bf="note" data-i="${i}" placeholder="備註（選填）" value="${esc(b.note)}"></div>`).join("")}
+    <button class="btn" data-act="addBat">＋ 新增打者</button>
+    <div class="sec">用打序單一次貼上</div>
+    <textarea class="in" id="bulk" placeholder="一行一位：背號 左/右/兩 備註&#10;7 右&#10;23 左 第一球愛揮&#10;51 兩"></textarea>
+    <div class="two" style="margin-top:10px"><button class="btn" data-act="bulkAdd">加在後面</button><button class="btn" data-act="bulkReplace">取代整份名單</button></div>
+    <p class="muted small" style="margin:6px 0 16px">修改會自動儲存</p>
+    <button class="btn danger" data-act="delOpp">刪除這支球隊</button>`;
+}
+function parseBulk(text){
+  const out = [];
+  for (const line of text.split(/\n/)) {
+    const m = line.trim().match(/^#?\s*(\d{1,3})\s*[,，、:：\s]*\s*(左右開弓|左右|兩|左|右|[SsLlRr](?![a-zA-Z]))?\s*(?:打)?\s*[,，、:：]?\s*(.*)$/);
+    if (!m) continue;
+    const h = (m[2] || "").toUpperCase();
+    out.push({ no:m[1], bat: /左右|兩|S/.test(h) ? "S" : /左|L/.test(h) ? "L" : /右|R/.test(h) ? "R" : "", note:(m[3] || "").trim() });
+  }
+  return out;
+}
+
+/* ---------- 練習：模擬打席 ----------
+   座標（已依打者左右打正規化）：x 0 內角壞球、1 內角、2 中、3 外角、4 外角壞球；y 0 偏高壞球、1 高、2 中、3 低、4 偏低壞球
+   建議的文字來自上面的 DATA（K("C",0) = C 章第 1 條）；這裡只決定「什麼情況用哪一條」和建議落點 */
+const K = (ch, i) => DATA.find(c => c.id === ch).items[i];
+const TYPE = n => PITCH_TYPES.find(t => t.name === n) || { name:n, cat:[] };
+const isFast = n => TYPE(n).cat[0] === "fast";
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const inZ = c => c.x >= 1 && c.x <= 3 && c.y >= 1 && c.y <= 3;
+const isMid = c => c.x === 2 && c.y === 2;
+const isFar = c => c.x % 4 === 0 && c.y % 4 === 0;
+const quad = c => (c.x === 2 || c.y === 2) ? "" : (c.x < 2 ? "in" : "out") + (c.y < 2 ? "high" : "low");
+const ALL = []; for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) ALL.push({ x, y });
+const SIDE = ["內角偏內", "內角", "中間", "外角", "外角偏外"], HT = ["偏高", "高", "中", "低", "偏低"];
+const locName = c => isMid(c) ? "紅中" : SIDE[c.x] + "・" + HT[c.y] + (inZ(c) ? "" : "（壞球）");
+const quadName = q => (q.startsWith("in") ? "內角" : "外角") + (q.endsWith("high") ? "高" : "低");
+const SLOW = ["offspeed", "breaking"];
+const RES = { swstr:"揮空好球", called:"好球", foul:"界外", ball:"壞球", hit:"安打", out:"出局" };
+const CUE = {
+  whiffEarly:"揮空！棒子偏高、偏前，出棒太早", whiffLate:"揮空！揮棒拖很後面，跟不上",
+  lunge:"揮空！重心整個前倒，被騙出去", whiffTrack:"揮空！頭有轉過去追球，看到了但慢半拍",
+  whiffCold:"揮空！這個位置他揮得很勉強",
+  foulEarly:"界外：出棒太早，只勾到一點", foulLate:"界外：被擠到，打成反方向",
+  foulPull:"界外：拉回方向的強勁界外，時間點抓到了", foulCold:"界外：這個位置他揮得很勉強，只碰到一點", foulTip:"界外：擦棒",
+  frozen:"站著看好球：沒想到同一顆又來", takeNoReact:"站著看好球：對變化球完全沒反應",
+  takeLate:"站著看好球：速球進來，他來不及出棒", takeOpp:"站著看好球：注意力還在另一邊", take:"站著看好球",
+  eyeTake:"壞球：兩好球了，誘餌球他還是不揮", halfSwing:"壞球：半揮，中途停棒", takeBall:"壞球：沒有出棒",
+  hitHard:"被打出去：紮實的安打", hitSoft:"被打出去：打得不紮實，但落在沒人的地方",
+  weakDrop:"打到了但軟弱：下墜超出他的預期，滾地出局", weakTiming:"打到了但時間點不對：軟弱出局", outNormal:"打進場內：守備接殺出局"
+};
+const STANCE = { close:"站位貼近本壘板", far:"站位遠離本壘板", front:"站在打擊區前緣（靠投手）", back:"站在打擊區後緣（靠捕手）" };
+const LEVELS = { am:"業餘", pro:"職業", pain:"痛苦" };
+const STATS_KEY = { am:"stats", pro:"statsPro", pain:"statsPain" };
+const statsOf = () => store[STATS_KEY[store.play.level] || "stats"];
+const SLOTS = { over:"上肩", tq:"四分之三", side:"側投", sub:"下勾" };
+const TWO = { protect:"兩好球後握短棒、重心放低", same:"兩好球後動作沒變，照樣大揮" };
+
+let game = null;
+const myTypes = cats => store.play.types.filter(t => TYPE(t).cat.some(c => cats.includes(c)));
+
+function newBatter(){
+  const hand = store.play.hand === "?" ? (Math.random() < .7 ? "R" : "L") : store.play.hand;
+  const level = store.play.level, pain = level === "pain", pro = level !== "am";
+  const P = { hand, expect: Math.random() < .6 ? "fast" : "slow",
+    adapt: pain ? rnd(.7, .95) : pro ? rnd(.45, .75) : rnd(.1, .4),
+    chase: pain ? rnd(.03, .15) : pro ? rnd(.06, .28) : rnd(.15, .5),
+    contact: pain ? rnd(.86, .95) : pro ? rnd(.8, .92) : rnd(.68, .88),
+    cold: pick(["in", "out"]) + pick(["high", "low"]),
+    two: pain ? pick(["eye", "eye", "protect"]) : pro ? pick(["protect", "protect", "eye", "eye", "same"]) : pick(["protect", "protect", "same", "eye"]) };
+  if (P.two === "eye") P.chase = Math.min(P.chase, pro ? .12 : .2);
+  P.stance = Math.random() < .7 ? (Math.random() < .5 ? (P.cold.startsWith("in") ? "close" : "far") : (P.expect === "slow" ? "front" : "back")) : "";
+  game = { prof:P, expect:P.expect, b:0, s:0, pitches:[], sel:{ type: store.play.types.length === 1 ? store.play.types[0] : null, cell:null },
+    note:null, twoShown:null, coldSeen:"", ff:0, end:null, anim:false,
+    pro, pain, level, streak:0, same: store.play.phand === hand, low: store.play.slot === "sub" ? 2 : store.play.slot === "side" ? 1 : 0 };
+  game.advice = advise(game);
+}
+
+/* 依目前局面，從資料庫挑一條建議，並算出建議落點 */
+function advise(g){
+  const { b, s } = g, last = g.pitches[g.pitches.length - 1], prev = g.pitches[g.pitches.length - 2], cue = last && last.cue, two = s === 2;
+  const sel = f => ALL.filter(f);
+  const EDGE = sel(c => inZ(c) && !isMid(c)), RING = sel(c => !inZ(c) && !isFar(c)), LOWZ = sel(c => inZ(c) && c.y === 3);
+  const byCount = () => two && b < 3 ? { cells:RING, loc:"好球帶外一點，誘他出棒" }
+    : (b === 3 || b - s >= 2) ? { cells:LOWZ, loc:"進好球帶，壓低" } : { cells:EDGE, loc:"好球帶邊角" };
+  const mk = (ch, i, o) => Object.assign({ it:K(ch, i) }, byCount(), o);
+  const coldCells = () => sel(c => quad(c) === g.coldSeen && !isFar(c));
+  const sameSide = c => last.x === 2 || (c.x !== 2 && (c.x < 2) === (last.x < 2));
+  const other = () => isFast(last.type) ? SLOW : ["fast"];
+  let a;
+  if (g.note === "startEarly") a = mk("E", 0, { cats:SLOW });
+  else if (g.note === "startLate") a = mk("E", 1, { cats:["fast"] });
+  else switch (cue) {
+    case "whiffEarly": case "foulEarly": a = mk("C", 0, { cats:SLOW }); break;
+    case "whiffLate": case "takeLate": a = mk("C", 1, { cats:["fast"] }); break;
+    case "foulLate": a = mk("E", 1, { cats:["fast"], cells:sel(c => c.x <= 1 && c.y <= 2 && !isFar(c)), loc:"內角偏高" }); break;
+    case "lunge": a = mk("C", 2, { same:last.type, cells:[{ x:last.x, y:last.y }], loc:"同一個位置再來一次" }); break;
+    case "whiffTrack": { const c = byCount(); a = mk("C", 3, { cats:["fast"], cells:c.cells.filter(sameSide), loc:"同一側，" + c.loc }); break; }
+    case "whiffCold": case "foulCold":
+      g.coldSeen = quad(last);
+      if (two) a = mk("H", 2, { cells:coldCells(), loc:"剛才他揮得很勉強的那個角（" + quadName(g.coldSeen) + "）" });
+      else { const c = byCount(); a = mk("H", 2, { cells:c.cells.filter(k => quad(k) !== g.coldSeen), loc:"先攻別的角，把「" + quadName(g.coldSeen) + "」留到兩好球" }); }
+      break;
+    case "halfSwing": a = mk("C", 5, { cats:other() }); break;
+    case "foulPull": a = mk("E", 2, { cats:SLOW }); break;
+    case "takeNoReact": a = mk("E", 4, { cats:SLOW, cells:EDGE, loc:"進好球帶邊角" }); break;
+    case "eyeTake": a = mk("F", 4, { cats:["breaking"], cells:EDGE, loc:"進好球帶邊角" }); break;
+    case "frozen": { const c = byCount(); a = mk("H", 1, { cells:c.cells.filter(k => !quad(last) || quad(k) !== quad(last)), loc:"換到另一個角，" + c.loc }); break; }
+  }
+  if (!a) {
+    if (two && g.ff >= 2) a = mk("E", 5, { cats:other() });
+    else if (two && b < 3) {
+      const p = [...g.pitches].reverse().find(k => inZ(k) && !isMid(k));
+      if (g.coldSeen) a = mk("H", 2, { cells:coldCells(), loc:"他揮得很勉強的那個角（" + quadName(g.coldSeen) + "）" });
+      else if (p) a = mk("B", 3, { same:p.type, cells:RING.filter(c => Math.abs(c.x - p.x) <= 1 && Math.abs(c.y - p.y) <= 1), loc:"第 " + p.n + " 球（" + p.type + "）的位置再往外一點" });
+      else if (g.twoShown === "protect") a = mk("F", 0, { cats:["drop"], cells:RING.filter(c => c.y === 4), loc:"好球帶下緣再低一點" });
+      else if (g.low === 2) a = mk("F", 2, { cats:["fast"], cells:RING.filter(c => c.y === 0), loc:"好球帶上緣再高一點的上飄速球", slot:"下勾的速球由下往上，高位本身就是決勝球" });
+      else a = mk("F", 2, { cells:RING.filter(c => c.y === 4 || c.y === 0), loc:"帶外：低的變化球或高的速球" });
+    }
+    else if (two) a = mk("H", 4, { cells:LOWZ, loc:"滿球數，進帶壓低" });
+    else if (b === 0 && s === 0) {
+      const st = g.prof.stance;
+      a = st === "close" ? mk("G", 0, { cats:["fast"], cells:sel(c => c.x <= 1 && c.y >= 1 && c.y <= 3), loc:"內角" })
+        : st === "far" ? mk("G", 1, { cells:sel(c => c.x >= 3 && c.y >= 1 && c.y <= 3), loc:"外角邊緣，或再往外一點" })
+        : st === "front" ? mk("G", 2, { cats:["fast"], cells:sel(c => c.y <= 1 && c.x >= 1 && c.x <= 3), loc:"高位" })
+        : st === "back" ? mk("G", 3, { cats:["drop"], cells:sel(c => c.y >= 3 && c.x >= 1 && c.x <= 3), loc:"低位" })
+        : mk("A", 0, {});
+    }
+    else if (b === 1 && s === 0) a = mk("A", 1, { cells:EDGE.filter(c => last.x === 2 ? (c.y !== 2 && (c.y < 2) !== (last.y < 2)) : (c.x !== 2 && (c.x < 2) !== (last.x < 2))), loc:"換到另一側的好球帶邊角" });
+    else if (b === 0 && s === 1) a = inZ(last) && !isMid(last) ? mk("A", 2, { same:last.type, cells:[{ x:last.x, y:last.y }], loc:"同一個位置" }) : mk("B", 0, {});
+    else if (b === 1 && s === 1) a = mk("B", 1, { cells:RING.filter(c => c.x % 4 === 0 || c.y === 4), loc:"看起來像好球、最後跑出去" });
+    else if (b === 2 && s === 1) a = mk("B", 2, {});
+    else a = mk("H", 4, {});
+  }
+  if (b === 3 && a.cells.some(c => !inZ(c))) { const z = a.cells.filter(inZ); a.cells = z.length ? z : LOWZ; a.loc += "（三壞球，要進帶）"; }
+  if (last && prev && !a.same && quad(last) && quad(last) === quad(prev)) {
+    const f = a.cells.filter(c => quad(c) !== quad(last));
+    if (f.length >= 2 && f.length < a.cells.length) { a.cells = f; a.loc += "，避開已連投兩球的角"; }
+  }
+  if (g.low && !a.same && a.cats) {
+    const out = c => c.x >= 3 && c.y >= 1 && c.y <= 3 && (b < 3 || inZ(c));
+    if (a.cats.length === 1 && a.cats[0] === "drop") {
+      a.cats = g.same ? ["breaking"] : ["offspeed"]; a.cells = sel(out); a.loc = "外角（橫向位移）";
+      a.slot = "你的出手角度沒有大落差的下墜球，改用橫向位移";
+    } else if (a.cats.includes("breaking")) {
+      const f = a.cells.filter(c => c.x >= 3);
+      if (g.same) { if (f.length) { a.cells = f; a.loc += "，放外角"; } a.slot = "同側打者：外角橫移的球是你的主武器"; }
+      else if (myTypes(["offspeed"]).length) { a.cats = ["offspeed"]; if (f.length) { a.cells = f; a.loc += "，放外角"; } a.slot = "異側打者：滑球會跑進他的揮棒路徑，改用往外角逃的變速系"; }
+    }
+  }
+  if (!a.cells.length) Object.assign(a, byCount());
+  if (a.cats && !myTypes(a.cats).length) a.noType = true;
+  return a;
+}
+function adviceTypes(a){
+  if (a.same) return "同球種：" + a.same;
+  if (!a.cats) return "球種不限";
+  return a.noType ? "你沒有這類球種，改靠位置和節奏" : myTypes(a.cats).join("、");
+}
+function evaluate(a, type, c, b){
+  const typeOK = a.same ? type === a.same : (!a.cats || a.noType || TYPE(type).cat.some(x => a.cats.includes(x)));
+  const locOK = a.cells.some(k => k.x === c.x && k.y === c.y);
+  let txt = typeOK && locOK ? "球種和位置都用到了線索"
+    : typeOK ? "球種對了，位置可以更好：" + a.loc
+    : locOK ? "位置對了，球種可以更好：" + adviceTypes(a)
+    : "沒有用到線索。當時建議：" + adviceTypes(a) + "，" + a.loc;
+  if (isMid(c) && b < 3) txt += "。紅中太甜，除非三壞球否則避免";
+  return { grade:(typeOK ? 1 : 0) + (locOK ? 1 : 0), txt };
+}
+
+function throwPitch(){
+  const g = game, P = g.prof, type = g.sel.type, aim = g.sel.cell;
+  if (!type || !aim || g.end) return;
+  /* 職業模式：25% 機率偏一格（壓邊角、帶外的球比較容易偏） */
+  let c = aim;
+  if (g.pro && Math.random() < (isMid(aim) ? (g.pain ? .18 : .12) : (g.pain ? .35 : .25))) {
+    const toMid = [[Math.sign(2 - aim.x), 0], [0, Math.sign(2 - aim.y)]].filter(d => d[0] || d[1]);
+    const d = g.pain && toMid.length && Math.random() < .5 ? pick(toMid) : pick([[1, 0], [-1, 0], [0, 1], [0, -1]]);
+    c = { x: clamp(aim.x + d[0], 0, 4), y: clamp(aim.y + d[1], 0, 4) };
+    if (c.x === aim.x && c.y === aim.y) c = aim;
+  }
+  const T = TYPE(type), fast = isFast(type), cls = fast ? "fast" : "slow";
+  const last = g.pitches[g.pitches.length - 1], prev = g.pitches[g.pitches.length - 2];
+  const z = inZ(c), mid = isMid(c), two = g.s === 2, a = g.advice, ev = evaluate(a, type, aim, g.b);
+  let timing = cls === g.expect;
+  const guessed = g.pain && ev.grade === 2 && g.streak >= 1 && Math.random() < .55;
+  if (guessed) timing = true;
+  g.streak = ev.grade === 2 ? g.streak + 1 : 0;
+  const cold = quad(c) === P.cold;
+  const same = !!last && last.type === type && last.x === c.x && last.y === c.y;
+  const third = same && !!prev && prev.type === type && prev.x === c.x && prev.y === c.y;
+  const excluded = same && !third;
+  const opp = !!last && last.res === "ball" && last.x !== 2 && c.x !== 2 && (last.x < 2) !== (c.x < 2);
+  const bait = !z && g.pitches.some(p => p.type === type && inZ(p) && Math.abs(p.x - c.x) <= 1 && Math.abs(p.y - c.y) <= 1);
+  const vert = !!last && ((last.y <= 1 && c.y >= 3) || (last.y >= 3 && c.y <= 1));
+  const far = isFar(c);
+  const tempting = !z && !far && ((!fast && (c.y === 4 || c.x === 4)) || (fast && (c.y === 0 || c.x === 0)));
+  const protect = two && P.two === "protect";
+  let ps;
+  if (z) {
+    ps = (g.b === 3 && g.s === 0) ? .08 : two ? .93 : (g.b === 0 && g.s === 0) ? .42 : .62;
+    if (!two) { if (!timing) ps -= g.pro ? .15 : .25; if (excluded) ps -= g.pro ? .15 : .3; if (opp) ps -= g.pro ? .08 : .15; if (mid && timing) ps += .2; }
+    if (third) ps += .2;
+  } else {
+    ps = P.chase + (two && P.two !== "eye" ? (g.pro ? .12 : .18) : 0) + (tempting ? (g.pro ? .08 : .12) : 0) + (bait ? (g.pro ? .15 : .25) : 0) + (vert && tempting ? .1 : 0) - (far ? .2 : 0)
+      + (g.low && g.same && !fast && c.x === 4 ? .08 : 0) + (g.low === 2 && fast && c.y === 0 ? .08 : 0);
+    if (g.b === 3 && g.s < 2) ps *= .3;
+  }
+  const swing = Math.random() < clamp(ps, .02, .95);
+  let res, cue;
+  if (swing) {
+    const pc = P.contact + (guessed ? .08 : 0) + (timing ? 0 : (protect ? -.12 : g.pain ? -.15 : g.pro ? -.2 : -.3)) + (z ? 0 : g.pro ? -.16 : -.22) + (cold ? -.18 : 0) + (vert ? -.12 : 0)
+      + (excluded ? -.15 : 0) + (third ? .2 : 0) + (opp ? -.1 : 0) + (mid ? .08 : 0) + (protect ? .08 : 0)
+      /* 出手角度：同側更難打、異側更好打；側投／下勾的橫移與上飄 */
+      + [.02, .07, .09][g.low] * (g.same ? -1 : 1)
+      + (g.low && !fast && c.x >= 3 ? (g.same ? -.07 : T.cat.includes("offspeed") ? -.06 : 0) : 0)
+      + (g.low && !g.same && !fast && T.cat.includes("breaking") && z && c.x <= 2 ? .1 : 0)
+      + (fast && c.y <= 1 ? [0, -.04, -.1][g.low] : 0);
+    if (Math.random() > clamp(pc, .05, .95)) {
+      res = "swstr";
+      cue = !timing ? (g.expect === "fast" ? "whiffEarly" : "whiffLate") : (!z && !fast && c.x >= 3) ? "lunge" : cold ? "whiffCold" : "whiffTrack";
+    } else {
+      const q = (timing ? 1 : 0) + (z ? 1 : 0) + (mid ? 1 : 0) - (cold ? 1 : 0) - (vert ? .5 : 0) - (excluded ? .5 : 0);
+      if (Math.random() < clamp(.45 + (timing ? 0 : .2) + (protect ? .1 : 0) + (z ? 0 : .15), 0, .9)) {
+        res = "foul";
+        cue = !timing ? (g.expect === "fast" ? "foulEarly" : "foulLate") : (fast && q >= 2) ? "foulPull" : cold ? "foulCold" : "foulTip";
+      } else {
+        const hit = Math.random() < clamp((g.pain ? .22 : g.pro ? .17 : .12) + .13 * q, .05, .7);
+        res = hit ? "hit" : "out";
+        cue = hit ? (q >= 2 ? "hitHard" : "hitSoft") : (T.cat.includes("drop") && c.y >= 3) ? "weakDrop" : !timing ? "weakTiming" : "outNormal";
+      }
+    }
+  } else if (z) { res = "called"; cue = excluded ? "frozen" : (!timing && !fast) ? "takeNoReact" : !timing ? "takeLate" : opp ? "takeOpp" : "take"; }
+  else { res = "ball"; cue = (two && tempting) ? "eyeTake" : (tempting && Math.random() < .35) ? "halfSwing" : "takeBall"; }
+
+  g.guessed = guessed;
+  g.pitches.push({ n:g.pitches.length + 1, type, x:c.x, y:c.y, aimX:aim.x, aimY:aim.y, guessed, miss: c === aim ? "" : locName(aim), res, cue, swing, b:g.b, s:g.s, grade:ev.grade, evalTxt:ev.txt,
+    adv:{ next:a.it.next, read:a.it.read, loc:a.loc, types:adviceTypes(a) } });
+  g.ff = (res === "foul" && two) ? g.ff + 1 : 0;
+  if (res === "swstr" || res === "called") g.s++;
+  else if (res === "foul") { if (g.s < 2) g.s++; }
+  else if (res === "ball") g.b++;
+  g.note = null;
+  if (res === "hit" || res === "out") g.end = res;
+  else if (g.s === 3) g.end = res === "called" ? "kl" : "ks";
+  else if (g.b === 4) g.end = "bb";
+  if (!g.end) {
+    if (((swing && !timing) || cue === "takeNoReact" || cue === "takeLate") && Math.random() < P.adapt) { g.expect = cls; g.note = cls === "fast" ? "startEarly" : "startLate"; }
+    else if (g.pro && !timing && last && isFast(last.type) === fast && Math.random() < .6) { g.expect = cls; g.note = cls === "fast" ? "startEarly" : "startLate"; g.read = true; }
+    if (g.s === 2 && !g.twoShown && TWO[P.two]) { g.twoShown = P.two; g.twoNew = true; } else g.twoNew = false;
+    g.advice = advise(g);
+  } else {
+    const st = statsOf(); st.n++; st.sum += score(g);
+    recordPA(g);
+    st[g.end === "ks" || g.end === "kl" ? "k" : g.end === "bb" ? "bb" : g.end === "hit" ? "h" : "o"]++;
+    save();
+  }
+  g.sel.cell = null; g.anim = swing;
+}
+const score = g => Math.round(g.pitches.reduce((n, p) => n + p.grade, 0) / (g.pitches.length * 2) * 100);
+
+/* 觀察到的線索（不論有沒有開建議都會顯示） */
+function observations(g){
+  const o = [];
+  if (!g.pitches.length) o.push(STANCE[g.prof.stance] || "站位沒有特別的地方");
+  if (g.guessed) o.push("他好像早就猜到這一球：照秘笈配得太規律，被讀到了");
+  if (g.read) { o.push("同一類球連投兩顆，他開始等它了"); g.read = false; }
+  if (g.note === "startEarly") o.push("他調整了：啟動明顯變早");
+  if (g.note === "startLate") o.push("他調整了：啟動變晚，把球看久一點");
+  if (g.twoNew) o.push(TWO[g.twoShown]);
+  return o;
+}
+const gradeIcon = n => n === 2 ? "✓" : n === 1 ? "△" : "✗";
+const dots = (n, max, cls) => Array.from({ length:max }, (_, i) => `<i class="${i < n ? cls : ""}"></i>`).join("");
+
+function viewPlay(){
+  if (!game) return viewSetup();
+  return game.end && !S3.busy ? viewDone() : viewLive();
+}
+function viewSetup(){
+  const p = store.play;
+  return `<p class="muted small">你配球，模擬打者做反應。每一球之後會告訴你：他露出什麼線索、這球配得如何、下一球怎麼配會更好。</p>
+    ${store.pitchers.length ? `<label class="f">帶入已登記的投手</label>
+      <select class="in" id="gPit"><option value="">自己勾球種</option>${store.pitchers.map(x => `<option value="${x.id}"${x.id === p.pit ? " selected" : ""}>${esc(x.name || "未命名")}${x.no ? " #" + esc(x.no) : ""}</option>`).join("")}</select>` : ""}
+    <label class="f">難度</label>
+    <div class="seg">${Object.entries(LEVELS).map(([v, t]) => `<button data-g="level" data-v="${v}" class="${p.level === v ? "on" : ""}">${t}</button>`).join("")}</div>
+    <p class="muted small" style="margin-top:6px">${{
+      am:"業餘：打者容易被時間差和誘餌球騙，球一定投到你點的位置。",
+      pro:"職業：打者碰球能力強、很少追壞球、會讀你的配球順序；你的控球也會偶爾偏一格。",
+      pain:"痛苦：打者幾乎不追壞球、被騙一次就調整，而且他也讀過秘笈：連續照建議配會被猜到。你的控球更常偏，還常常偏向紅中。"
+    }[p.level] || ""}</p>
+    <div class="two"><div><label class="f">投球手</label>
+      <div class="seg"><button data-g="phand" data-v="R" class="${p.phand !== "L" ? "on" : ""}">右投</button><button data-g="phand" data-v="L" class="${p.phand === "L" ? "on" : ""}">左投</button></div></div></div>
+    <label class="f">出手角度</label>
+    <div class="seg">${Object.entries(SLOTS).map(([v, t]) => `<button data-g="slot" data-v="${v}" class="${p.slot === v ? "on" : ""}">${t}</button>`).join("")}</div>
+    <label class="f">球種（可複選，已選 ${p.types.length}）</label>
+    <div class="tgrid">${PITCH_TYPES.filter(t => t.name !== "其他").map(t => `<button data-g="type" data-v="${esc(t.name)}" class="${p.types.includes(t.name) ? "on" : ""}">${esc(t.name)}</button>`).join("")}</div>
+    <label class="f">打者</label>
+    <div class="seg">${[["?", "隨機"], ["R", "右打"], ["L", "左打"]].map(([v, t]) => `<button data-g="hand" data-v="${v}" class="${p.hand === v ? "on" : ""}">${t}</button>`).join("")}</div>
+    <label class="f">建議</label>
+    <div class="seg"><button data-g="hints" data-v="1" class="${p.hints ? "on" : ""}">每球都給建議</button><button data-g="hints" data-v="" class="${p.hints ? "" : "on"}">打完才檢討</button></div>
+    <button class="btn pri" style="margin-top:18px" data-g="start"${p.types.length ? "" : " disabled"}>開始打席</button>
+    <div class="sec">我的稱號</div>
+    ${titleCard(p.level)}`;
+}
+function fieldHtml(g, live){
+  if (live) return `<div class="stage3d"><canvas id="c3d" aria-label="球場，點好球帶格子選位置"></canvas></div>`;
+  const P = g.prof;
+  let cells = "";
+  for (let y = 0; y < 5; y++) for (let col = 0; col < 5; col++) {
+    const x = P.hand === "R" ? col : 4 - col, c = { x, y };
+    const here = g.pitches.filter(p => p.x === x && p.y === y), lp = here[here.length - 1];
+    const cls = [inZ(c) ? "z" : "o", 
+      live && g.sel.cell && g.sel.cell.x === x && g.sel.cell.y === y ? "sel" : "", lp ? "r-" + lp.res : ""].join(" ");
+    cells += `<button class="${cls}" ${live ? `data-g="cell" data-x="${x}" data-y="${y}"` : "disabled"} aria-label="${locName(c)}">${here.map(p => p.n).join(",")}</button>`;
+  }
+  const bat = `<svg class="bt${P.hand === "L" ? " l" : ""}" viewBox="0 0 64 150" aria-hidden="true"><circle cx="30" cy="22" r="10"/><path d="M30 32V86M30 86L18 128M30 86L42 128M30 46L46 54"/><path class="bat${g.anim ? " swing" : ""}" d="M46 54L54 8"/></svg>`;
+  const grid = `<div><div class="zone">${cells}</div><div class="zl"><span>${P.hand === "R" ? "← 內角" : "← 外角"}</span><span>亮格＝好球帶・外圈＝壞球</span><span>${P.hand === "R" ? "外角 →" : "內角 →"}</span></div></div>`;
+  return `<div class="field">${P.hand === "R" ? bat + grid : grid + bat}</div>`;
+}
+function viewLive(){
+  const g = game, a = g.advice, last = g.pitches[g.pitches.length - 1], hints = store.play.hints, obs = observations(g);
+  const fb = last ? `<div class="fb"><div><span class="muted">第 ${last.n} 球</span> ${esc(last.type)}・${locName(last)} → <b class="r-${last.res}">${RES[last.res]}</b></div>
+      ${last.miss ? `<div class="miss">🎯 控球偏了：瞄準${esc(last.miss)}</div>` : ""}
+      <div class="cue1">👁 ${CUE[last.cue]}</div>
+      ${hints ? `<div class="ev g${last.grade}">${gradeIcon(last.grade)} ${esc(last.evalTxt)}</div>` : ""}</div>` : "";
+  const ob = obs.length ? `<div class="fb"><div class="cue1">👁 ${obs.map(esc).join("；")}</div></div>` : "";
+  const adv = hints ? `<div class="adv"><div class="lab">💡 ${last ? "下一球可以這樣配" : "第一球可以這樣配"}</div>
+      <div><span class="k">判讀</span>${esc(a.it.read)}</div>
+      <div><span class="k">做法</span><b>${esc(a.it.next)}</b></div>
+      <div><span class="k">球種</span>${esc(adviceTypes(a))}</div>
+      <div><span class="k">落點</span>${esc(a.loc)}</div>
+      ${a.slot ? `<div><span class="k">角度</span>${esc(a.slot)}</div>` : ""}</div>` : "";
+  return `<div class="sb"><div class="cnt"><span>B</span>${dots(g.b, 3, "b")}<span>S</span>${dots(g.s, 2, "s")}</div>
+      <div class="who">${g.level !== "am" ? LEVELS[g.level] + "・" : ""}${g.prof.hand === "R" ? "右打者" : "左打者"}（${g.same ? "同側" : "異側"}）・第 ${g.pitches.length + 1} 球</div><button data-g="quit">放棄</button></div>
+    ${S3.busy ? "" : fb + ob + adv}${fieldHtml(g, true)}
+    <div class="tgrid pt">${store.play.types.map(t => `<button data-g="pt" data-v="${esc(t)}" class="${g.sel.type === t ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
+    ${S3.busy ? `<button class="btn pri" disabled>投球中…（點球場可跳過）</button>` :
+      `<button class="btn pri" data-g="throw"${g.sel.type && g.sel.cell ? "" : " disabled"}>${g.sel.type && g.sel.cell ? "投球：" + esc(g.sel.type) + "・" + locName(g.sel.cell) : "先選球種，再點球場上的位置"}</button>
+      ${last ? `<button class="btn" data-g="replay">🔁 重播第 ${last.n} 球</button>` : ""}`}`;
+}
+function viewDone(){
+  const g = game, P = g.prof, sc = score(g), last = g.pitches[g.pitches.length - 1];
+  const out = { ks:"三振（揮空）", kl:"三振（站著不動）", bb:"保送", hit:"被打安打", out:"打進場內出局" }[g.end];
+  const good = g.end !== "bb" && g.end !== "hit";
+  const fastT = store.play.types.filter(isFast), slowT = store.play.types.filter(t => !isFast(t));
+  const tips = [
+    P.expect === "fast" ? "他一開始在等速球：" + (slowT.length ? "用 " + slowT.join("、") + " 搶時間差" : "你沒有慢的球，只能靠位置") : "他一開始在等變化球：" + (fastT.length ? "用 " + fastT.join("、") + " 壓他" : "你沒有速球，改用速度差最大的兩顆球"),
+    "冷區在" + quadName(P.cold) + "：決勝球壓這個角",
+    P.chase < .25 ? "他很少追壞球：決勝球要進好球帶邊角" : P.chase < .38 ? "他偶爾追壞球：兩好球後可以往帶外騙一顆" : "他愛追壞球：兩好球後往帶外騙",
+    P.two === "protect" ? "兩好球後會握短棒保護：用下墜球引誘" : P.two === "same" ? "兩好球後照樣大揮：帶外的決勝球有效" : "兩好球後選球更仔細：誘餌球沒用，要進帶"
+  ];
+  if (g.pain && g.pitches.some(p => p.guessed)) tips.push("痛苦模式的打者讀過秘笈：最佳解連用兩三次就會被猜到，要穿插一顆「次佳」的球打亂他");
+  if (g.low) tips.push(g.same ? "同側對決（" + SLOTS[store.play.slot] + "）：他很難看清出手點，外角橫移的球最有效" : "異側對決（" + SLOTS[store.play.slot] + "）：他看你的球比較清楚，少投進帶的滑球，多用外角的變速系");
+  if (g.low === 2) tips.push("下勾的高位速球是武器：好球帶上緣的上飄球他很難打紮實");
+  if (g.expect !== P.expect) tips.push("打席中他調整過等球的時間點，啟動早晚變了就是訊號");
+  const luck = sc >= 75 && !good ? "配球的思路沒問題，結果不好是機率。" : sc < 50 && good ? "結果是好的，但過程有點靠運氣。" : "";
+  const nt = (g.newTitles || []).map(t => `<div class="unlock"><span>${t.icon}</span><div><b>解鎖新稱號：${t.name}</b><div class="small">${t.sub}</div></div></div>`).join("")
+    + (g.mainChanged && !(g.newTitles || []).includes(g.mainChanged) ? `<div class="unlock"><span>${g.mainChanged.icon}</span><div><b>目前稱號變成：${g.mainChanged.name}</b><div class="small">${g.mainChanged.sub}</div></div></div>` : "");
+  return nt + `<div class="principle"><b>打席結果（${LEVELS[g.level]}）</b><span style="font-size:1.25rem;font-weight:800">${out}</span>　配球分 <b>${sc}</b>
+      <div class="small" style="margin-top:4px">👁 ${CUE[last.cue]}${luck ? "<br>" + luck : ""}</div></div>
+    ${fieldHtml(g, false)}
+    <div class="sec">逐球檢討</div>
+    ${g.pitches.map(p => `<div class="rv"><div><b>${p.n}.</b> <span class="muted">${p.b}-${p.s}</span> ${esc(p.type)}・${locName(p)} → <b class="r-${p.res}">${RES[p.res]}</b> <span class="ev g${p.grade}">${gradeIcon(p.grade)}</span></div>
+      ${p.miss ? `<div class="small miss">🎯 瞄準${esc(p.miss)}，偏了一格</div>` : ""}${p.guessed ? `<div class="small miss">🔮 被他猜到了</div>` : ""}<div class="small muted">👁 ${CUE[p.cue]}</div><div class="small ev g${p.grade}">${esc(p.evalTxt)}</div></div>`).join("")}
+    <div class="sec">這個打者的真面目</div>
+    <div class="adv">${tips.map(t => `<div>・${esc(t)}</div>`).join("")}</div>
+    <button class="btn pri" style="margin-top:16px" data-g="start">再來一個打者</button>
+    <button class="btn" data-g="setup">換球種／設定</button>`;
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-g]");
+  if (!t) return;
+  const p = store.play, v = t.dataset.v;
+  switch (t.dataset.g) {
+    case "type": p.types = p.types.includes(v) ? p.types.filter(x => x !== v) : PITCH_TYPES.map(x => x.name).filter(n => n === v || p.types.includes(n)); p.pit = ""; break;
+    case "hand": p.hand = v; break;
+    case "level": p.level = v; break;
+    case "phand": p.phand = v; break;
+    case "slot": p.slot = v; break;
+    case "hints": p.hints = !!v; break;
+    case "start": if (!p.types.length) return; save(); newBatter(); render(); return;
+    case "setup": game = null; render(); return;
+    case "quit": if (game.pitches.length && !confirm("放棄這個打席？")) return; game = null; render(); return;
+    case "resetStats": e.preventDefault(); if (!confirm("戰績歸零？")) return; store[STATS_KEY[p.level] || "stats"] = { n:0, k:0, bb:0, h:0, o:0, sum:0 }; store.hist[p.level] = []; store.legacy[p.level] = null; break;
+    case "share": shareCard(); return;
+    case "pt": game.sel.type = v; render(true); return;
+    case "cell": game.sel.cell = { x:+t.dataset.x, y:+t.dataset.y }; render(true); return;
+    case "throw": if (S3.busy || !game.sel.type || !game.sel.cell) return; throwPitch(); game.anim = false; S3.arm(); render(true);
+      S3.play(game.pitches[game.pitches.length - 1], () => render(true)); return;
+    case "replay": if (S3.busy) return; { const lp = game.pitches[game.pitches.length - 1]; S3.arm(); render(true); S3.play(lp, () => render(true)); } return;
+    default: return;
+  }
+  save(); render(true);
+});
+document.addEventListener("change", e => {
+  if (e.target.id !== "gPit") return;
+  const pt = store.pitchers.find(x => x.id === e.target.value);
+  store.play.pit = pt ? pt.id : "";
+  if (pt) { store.play.phand = pt.hand === "L" ? "L" : "R"; store.play.slot = pt.slot || "tq"; const names = (pt.pitches || []).map(x => x.type); store.play.types = PITCH_TYPES.map(x => x.name).filter(n => n !== "其他" && names.includes(n)); }
+  save(); render(true);
+});
+
+/* ---------- 稱號 ----------
+   以「最近 20 打席」計算；三振率、被安打率的門檻依難度放寬 */
+const WINDOW = 20;
+const TH = {
+  am:   { k:.60, kLow:.45, km:.75, hHi:.30, hLow:.05, hBad:.20 },
+  pro:  { k:.40, kLow:.30, km:.55, hHi:.40, hLow:.10, hBad:.28 },
+  pain: { k:.22, kLow:.15, km:.35, hHi:.50, hLow:.18, hBad:.40 }
+};
+const pct = x => Math.round(x * 100) + "%";
+/* 排列順序＝稀有度：同時符合時取最前面的當主稱號 */
+const TITLES = [
+  { id:"emperor", icon:"👑", name:"配球皇帝", sub:"配得對，結果也好",
+    cond:t => `配球分 ≥ 85，三振率 ≥ ${pct(t.k)}`, test:(w, t) => w.sc >= 85 && w.kR >= t.k },
+  { id:"conquer", icon:"🏔", name:"痛苦征服者", sub:"在痛苦模式活下來的人", pain:true,
+    cond:() => "痛苦模式：三振率 ≥ 30%，被安打率 ≤ 20%", test:(w, t, lv) => lv === "pain" && w.kR >= .3 && w.hR <= .2 },
+  { id:"mind", icon:"🔮", name:"讀心術", sub:"打者永遠猜不到你下一球", pain:true,
+    cond:() => "痛苦模式：被猜到的球 ≤ 5%，配球分 ≥ 70", test:(w, t, lv) => lv === "pain" && w.gR !== null && w.gR <= .05 && w.sc >= 70 },
+  { id:"kmonster", icon:"🔥", name:"三振魔人", sub:"三振是唯一的語言",
+    cond:t => `三振率 ≥ ${pct(t.km)}`, test:(w, t) => w.kR >= t.km },
+  { id:"rebel", icon:"😈", name:"反骨仔", sub:"不照書，還一直三振人",
+    cond:t => `三振率 ≥ ${pct(t.k)}，配球分 ≤ 40`, test:(w, t) => w.kR >= t.k && w.sc <= 40 },
+  { id:"lucky", icon:"🎲", name:"天選之人", sub:"亂配卻沒被打，純運氣",
+    cond:t => `配球分 ≤ 40，被安打率 ≤ ${pct(t.hLow)}`, test:(w, t) => w.sc <= 40 && w.hR <= t.hLow },
+  { id:"unlucky", icon:"😭", name:"非戰之罪", sub:"配得好卻一直被打",
+    cond:t => `配球分 ≥ 75，被安打率 ≥ ${pct(t.hBad)}`, test:(w, t) => w.sc >= 75 && w.hR >= t.hBad },
+  { id:"nerd", icon:"📚", name:"書呆子捕手", sub:"照書配，結果卻普通",
+    cond:t => `配球分 ≥ 85，三振率 < ${pct(t.kLow)}`, test:(w, t) => w.sc >= 85 && w.kR < t.kLow },
+  { id:"slave", icon:"📖", name:"秘笈奴隸", sub:"每一球都被打者猜到", pain:true,
+    cond:() => "痛苦模式：被猜到的球 ≥ 30%", test:(w, t, lv) => lv === "pain" && w.gR !== null && w.gR >= .3 },
+  { id:"express", icon:"🚚", name:"紅中快遞", sub:"使命必達，送到打者最愛的位置",
+    cond:t => `被安打率 ≥ ${pct(t.hHi)}`, test:(w, t) => w.hR >= t.hHi },
+  { id:"walker", icon:"🚶", name:"四壞製造機", sub:"打者不用揮棒也能上壘",
+    cond:() => "保送率 ≥ 20%", test:w => w.bbR >= .2 },
+  { id:"quick", icon:"⚡", name:"三球解決", sub:"不跟打者浪費時間",
+    cond:t => `平均每打席 ≤ 3.2 球，被安打率 < ${pct(t.hBad)}`, test:(w, t) => w.ppa !== null && w.ppa <= 3.2 && w.hR < t.hBad },
+  { id:"grind", icon:"🪢", name:"纏鬥王", sub:"每個打席都打成長期抗戰",
+    cond:() => "平均每打席 ≥ 5.5 球", test:w => w.ppa !== null && w.ppa >= 5.5 },
+  { id:"wall", icon:"🧱", name:"鐵壁控球", sub:"從不送人上壘",
+    cond:t => `連續 ${WINDOW} 打席零保送，三振率 ≥ ${pct(t.kLow)}`, test:(w, t) => w.n >= WINDOW && w.bb === 0 && w.kR >= t.kLow },
+  { id:"steady", icon:"🙂", name:"穩健型捕手", sub:"沒有明顯弱點",
+    cond:() => "打滿 10 打席，沒有符合其他稱號", test:() => true },
+  { id:"rookie", icon:"🐣", name:"見習捕手", sub:"再多打幾個打席", hidden:true,
+    cond:() => "打不到 10 打席", test:() => false }
+];
+const T_BY = Object.fromEntries(TITLES.map(t => [t.id, t]));
+const COLLECTIBLE = TITLES.filter(t => !t.hidden);
+
+/* 最近 20 打席；更新前的舊戰績只有總數，不足 20 打席時按比例補上 */
+function windowStats(lv){
+  const h = (store.hist[lv] || []).slice(-WINDOW);
+  const w = { n:h.length, k:0, bb:0, h:0, sum:0 };
+  for (const r of h) { w.sum += r.sc; if (r.end === "ks" || r.end === "kl") w.k++; else if (r.end === "bb") w.bb++; else if (r.end === "hit") w.h++; }
+  const L = store.legacy[lv];
+  if (w.n < WINDOW && L && L.n) {
+    const f = Math.min(WINDOW - w.n, L.n) / L.n;
+    w.n += L.n * f; w.k += L.k * f; w.bb += L.bb * f; w.h += L.h * f; w.sum += L.sum * f;
+  }
+  const np = h.reduce((a, r) => a + r.np, 0), gd = h.reduce((a, r) => a + (r.gd || 0), 0);
+  Object.assign(w, { kR:w.n ? w.k / w.n : 0, bbR:w.n ? w.bb / w.n : 0, hR:w.n ? w.h / w.n : 0, sc:w.n ? w.sum / w.n : 0,
+    ppa: h.length >= 10 ? np / h.length : null, gR: h.length >= 10 && np ? gd / np : null });
+  return w;
+}
+function titlesFor(lv){
+  const w = windowStats(lv), t = TH[lv] || TH.am;
+  if (w.n < 10) return { w, main:T_BY.rookie, all:[] };
+  const all = TITLES.filter(x => !x.hidden && x.id !== "steady" && x.test(w, t, lv));
+  return { w, main: all[0] || T_BY.steady, all: all.length ? all : [T_BY.steady] };
+}
+function recordPA(g){
+  const lv = g.level, h = store.hist[lv] || (store.hist[lv] = []);
+  h.push({ sc:score(g), end:g.end, np:g.pitches.length, gd:g.pitches.filter(p => p.guessed).length });
+  if (h.length > 200) h.splice(0, h.length - 200);
+  const before = titlesFor(lv).main.id;
+  g.newTitles = [];
+  for (const t of titlesFor(lv).all) if (!store.titles[t.id]) { store.titles[t.id] = { at:new Date().toISOString().slice(0, 10), lv }; g.newTitles.push(t); }
+  const now = titlesFor(lv).main;
+  g.mainChanged = before !== now.id && now.id !== "rookie" ? now : null;
+}
+function titleCard(lv){
+  const { w, main } = titlesFor(lv), t = TH[lv] || TH.am, st = store[STATS_KEY[lv]];
+  const got = COLLECTIBLE.filter(x => store.titles[x.id]).length;
+  const n = Math.round(w.n);
+  return `<div class="tcard">
+      <div class="tc-top"><div class="ti">${main.icon}</div><div><div class="tl">${LEVELS[lv]}・目前稱號</div><div class="tn">${main.name}</div><div class="td">${main.sub}</div></div></div>
+      ${n ? `<div class="tstats"><div><b>${pct(w.kR)}</b>三振率</div><div><b>${Math.round(w.sc)}</b>配球分</div><div><b>${pct(w.hR)}</b>被安打率</div><div><b>${pct(w.bbR)}</b>保送率</div></div>
+      <div class="muted small">最近 ${n} 打席${n < 10 ? `・再打 ${10 - n} 打席就有稱號` : ""}</div>` : `<div class="muted small">打完 10 個打席就會得到第一個稱號</div>`}
+    </div>
+    <label class="f">你的名字（顯示在戰績卡上）</label>
+    <input class="in" id="gName" maxlength="12" placeholder="例：阿明" value="${esc(store.play.name || "")}">
+    <div class="two" style="margin-top:10px"><button class="btn" data-g="share"${n >= 10 ? "" : " disabled"}>📤 分享戰績卡</button><button class="btn" data-go="#/titles">🏅 稱號收藏 ${got}/${COLLECTIBLE.length}</button></div>
+    ${st && st.n ? `<p class="muted small">${LEVELS[lv]}生涯：${st.n} 打席・三振 ${st.k}・保送 ${st.bb}・被安打 ${st.h}・出局 ${st.o}・平均配球分 ${Math.round(st.sum / st.n)}　<a href="#" data-g="resetStats" style="color:var(--muted)">歸零</a></p>` : ""}`;
+}
+function viewTitles(){
+  const lv = store.play.level, t = TH[lv] || TH.am, cur = titlesFor(lv).main.id;
+  const got = COLLECTIBLE.filter(x => store.titles[x.id]).length;
+  return `<p class="muted small">已解鎖 <b style="color:var(--accent)">${got}/${COLLECTIBLE.length}</b>。條件以最近 ${WINDOW} 打席計算，下面的門檻是「${LEVELS[lv]}」難度的數字；稱號一旦拿到就永久收藏。</p>
+    ${COLLECTIBLE.map(x => { const u = store.titles[x.id];
+      return `<div class="trow${u ? "" : " locked"}${x.id === cur ? " cur" : ""}"><div class="ti">${u ? x.icon : "🔒"}</div>
+        <div class="mid"><div><b>${x.name}</b>${x.id === cur ? ` <span class="badge">目前</span>` : ""}</div>
+        <div class="small">${u ? esc(x.sub) + "・" : ""}<span class="muted">${x.cond(t)}</span></div>
+        ${u ? `<div class="small muted">${u.at} 在${LEVELS[u.lv] || ""}模式解鎖</div>` : ""}</div></div>`; }).join("")}`;
+}
+
+/* 戰績卡圖片 */
+function drawCard(){
+  const lv = store.play.level, { w, main } = titlesFor(lv);
+  const got = COLLECTIBLE.filter(x => store.titles[x.id]).length;
+  const W = 1080, H = 1350, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const x = cv.getContext("2d"), F = '"PingFang TC","Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei",sans-serif';
+  const g = x.createRadialGradient(W * .7, H * .25, 50, W * .5, H * .4, 1100); g.addColorStop(0, "#22314a"); g.addColorStop(1, "#0d1117");
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const rr = (X, Y, w2, h2, r) => { x.beginPath(); if (x.roundRect) x.roundRect(X, Y, w2, h2, r); else x.rect(X, Y, w2, h2); };
+  x.textAlign = "center"; x.textBaseline = "alphabetic";
+  x.fillStyle = "#f2cc60"; x.font = `800 44px ${F}`; x.fillText("瘋狗野球 配球練習", W / 2, 120);
+  const lvTxt = LEVELS[lv] + "模式"; x.font = `800 40px ${F}`; const lw = x.measureText(lvTxt).width + 70;
+  x.fillStyle = lv === "pain" ? "#f85149" : lv === "pro" ? "#58a6ff" : "#3fb950"; rr(W / 2 - lw / 2, 160, lw, 70, 35); x.fill();
+  x.fillStyle = "#0d1117"; x.fillText(lvTxt, W / 2, 210);
+  x.fillStyle = "#e6edf3"; x.font = `800 64px ${F}`; x.fillText(store.play.name || "無名捕手", W / 2, 330);
+  x.font = `200px ${F}`; x.fillText(main.icon, W / 2, 570);
+  x.fillStyle = "#f2cc60"; x.font = `900 120px ${F}`; x.fillText(main.name, W / 2, 730);
+  x.fillStyle = "#b6c0cc"; x.font = `500 44px ${F}`; x.fillText(main.sub, W / 2, 800);
+  const cells = [[pct(w.kR), "三振率"], [String(Math.round(w.sc)), "配球分"], [pct(w.hR), "被安打率"], [pct(w.bbR), "保送率"]];
+  cells.forEach(([v, l], i) => {
+    const cx = 60 + (i % 2) * 490, cy = 870 + Math.floor(i / 2) * 190;
+    x.fillStyle = "#161b22"; rr(cx, cy, 470, 170, 28); x.fill(); x.strokeStyle = "#30363d"; x.lineWidth = 3; x.stroke();
+    x.fillStyle = i === 1 ? "#f2cc60" : "#e6edf3"; x.font = `900 78px ${F}`; x.fillText(v, cx + 235, cy + 95);
+    x.fillStyle = "#9aa4b0"; x.font = `600 36px ${F}`; x.fillText(l, cx + 235, cy + 145);
+  });
+  x.fillStyle = "#9aa4b0"; x.font = `500 34px ${F}`;
+  x.fillText(`最近 ${Math.round(w.n)} 打席・稱號收藏 ${got}/${COLLECTIBLE.length}・${new Date().toISOString().slice(0, 10)}`, W / 2, 1290);
+  return cv;
+}
+async function shareCard(){
+  const cv = drawCard(), name = "配球戰績卡-" + new Date().toISOString().slice(0, 10) + ".png";
+  const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+  const file = new File([blob], name, { type:"image/png" });
+  const { main } = titlesFor(store.play.level);
+  try { if (navigator.canShare && navigator.canShare({ files:[file] })) { await navigator.share({ files:[file], text:`我在${LEVELS[store.play.level]}模式拿到「${main.name}」！來挑戰 https://gogointop.github.io/pitch-handbook/` }); return; } }
+  catch (e) { if (e.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast("已存成圖片，可以傳到群組");
+}
+document.addEventListener("input", e => { if (e.target.id === "gName") { store.play.name = e.target.value.trim(); save(); } });
+
+/* ============================================================
+   擬 3D 球場（預覽版）
+   世界座標（公尺）：X 左右（捕手視角右邊為正）、Y 高度、Z 從本壘往投手方向
+   ============================================================ */
+const S3 = (() => {
+  const CAM = { z:-2.6, y:1.45 };
+  const ZONE = { w:.43 / 3, h:.55 / 3, top:1.05 };
+  const REL_Z = 16.9;
+  let W = 360, H = 450, F = 720, H0 = 200, dpr = 1, bg = null, bgKey = "";
+  let busy = false, anim = null, last = null;
+
+  /* 投影 */
+  const P = (X, Y, Z) => { const d = Math.max(.2, Z - CAM.z); return { x: W / 2 + F * X / d, y: H0 - F * (Y - CAM.y) / d, s: F / d }; };
+  const handOf = () => game ? game.prof.hand : "R";
+  const cellWorld = c => {
+    const col = handOf() === "R" ? c.x : 4 - c.x;
+    return { X:(col - 2) * ZONE.w, Y:ZONE.top + ZONE.h / 2 - c.y * ZONE.h };
+  };
+  const cellRect = (col, row) => {
+    const a = P((col - 2.5) * ZONE.w, ZONE.top + ZONE.h - row * ZONE.h, 0), b = P((col - 1.5) * ZONE.w, ZONE.top - row * ZONE.h, 0);
+    return { x:a.x, y:a.y, w:b.x - a.x, h:b.y - a.y };
+  };
+  const slotRel = () => {
+    const s = store.play.slot || "tq", side = (store.play.phand || "R") === "R" ? -1 : 1;
+    const o = { over:[.25, 1.95], tq:[.55, 1.75], side:[.95, 1.3], sub:[.8, .55] }[s];
+    return { X: side * o[0], Y: o[1] };
+  };
+
+  /* 隨機但固定的看台 */
+  function rng(seed){ let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+
+  function size(cv){
+    const cw = Math.min(cv.parentElement.clientWidth, 460);
+    const nk = cw + "x" + (window.devicePixelRatio || 1);
+    W = cw; H = Math.round(cw * 1.3); F = 1.85 * W; H0 = .40 * W; dpr = window.devicePixelRatio || 1;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    if (nk !== bgKey) { bg = drawBackground(); bgKey = nk; }
+  }
+
+  function drawBackground(){
+    const c = document.createElement("canvas"); c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+    const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const R = rng(7);
+    const hz = P(0, 0, 400).y;
+    /* 夜空 */
+    let g = x.createLinearGradient(0, 0, 0, hz); g.addColorStop(0, "#050a18"); g.addColorStop(1, "#1a2c4d");
+    x.fillStyle = g; x.fillRect(0, 0, W, hz + 2);
+    for (let i = 0; i < 40; i++) { x.fillStyle = `rgba(255,255,255,${.2 + R() * .5})`; x.fillRect(R() * W, R() * hz * .5, 1.2, 1.2); }
+    /* 看台：三層弧形 */
+    const standTop = hz - W * .17;
+    for (let tier = 0; tier < 3; tier++) {
+      const y0 = standTop + tier * W * .05, y1 = y0 + W * .055;
+      x.fillStyle = ["#1b2333", "#222b3d", "#283247"][tier]; x.fillRect(0, y0, W, y1 - y0 + 1);
+      const rows = 5, cols = Math.round(W / 4);
+      for (let r = 0; r < rows; r++) for (let k = 0; k < cols; k++) {
+        if (R() < .18) continue;
+        const hue = R(); x.fillStyle = hue < .35 ? "#c9b458" : hue < .55 ? "#3f7fbf" : hue < .7 ? "#c4504a" : hue < .85 ? "#d9d9d9" : "#5d8a4a";
+        x.globalAlpha = .55 + R() * .4;
+        x.fillRect(k * (W / cols) + R(), y0 + 2 + r * ((y1 - y0 - 3) / rows), W / cols - 1.3, (y1 - y0 - 3) / rows - 1);
+      }
+      x.globalAlpha = 1;
+      x.fillStyle = "rgba(0,0,0,.35)"; x.fillRect(0, y1 - 2, W, 2);
+    }
+    /* 計分板與燈塔 */
+    x.fillStyle = "#0b1220"; x.fillRect(W * .38, standTop - W * .085, W * .24, W * .07);
+    x.strokeStyle = "#f2cc60"; x.lineWidth = 1.5; x.strokeRect(W * .38, standTop - W * .085, W * .24, W * .07);
+    x.fillStyle = "#f2cc60"; x.font = `bold ${Math.round(W * .028)}px sans-serif`; x.textAlign = "center"; x.fillText("瘋狗野球", W / 2, standTop - W * .04);
+    for (const lx of [.06, .94]) {
+      x.fillStyle = "#2a3346"; x.fillRect(W * lx - 2, standTop - W * .16, 4, W * .16);
+      const gl = x.createRadialGradient(W * lx, standTop - W * .17, 2, W * lx, standTop - W * .17, W * .2);
+      gl.addColorStop(0, "rgba(255,250,220,.9)"); gl.addColorStop(.15, "rgba(255,250,220,.35)"); gl.addColorStop(1, "rgba(255,250,220,0)");
+      x.fillStyle = gl; x.fillRect(W * lx - W * .2, standTop - W * .37, W * .4, W * .4);
+      x.fillStyle = "#fffbe6"; x.fillRect(W * lx - W * .03, standTop - W * .18, W * .06, W * .022);
+    }
+    /* 全壘打牆 */
+    x.fillStyle = "#123326"; x.fillRect(0, hz - W * .022, W, W * .022);
+    x.fillStyle = "#f2cc60"; x.fillRect(0, hz - W * .022, W, 1.5);
+    /* 草地＋割草條紋 */
+    g = x.createLinearGradient(0, hz, 0, H); g.addColorStop(0, "#2c6b33"); g.addColorStop(1, "#3f8a3f");
+    x.fillStyle = g; x.fillRect(0, hz, W, H - hz);
+    for (let z = 120; z > 0; z -= 6) {
+      const a = P(0, 0, z).y, b = P(0, 0, z - 3).y;
+      x.fillStyle = "rgba(255,255,255,.035)"; x.fillRect(0, a, W, b - a);
+    }
+    /* 內野紅土：以投手丘為中心的大圓＋本壘附近 */
+    const poly = (pts, fill) => { x.beginPath(); pts.forEach((p, i) => { const q = P(p[0], 0, p[1]); i ? x.lineTo(q.x, q.y) : x.moveTo(q.x, q.y); }); x.closePath(); x.fillStyle = fill; x.fill(); };
+    const ring = [];
+    for (let a = -Math.PI * .27; a <= Math.PI * .27; a += .02) ring.push([Math.sin(a) * 29, 18.4 + Math.cos(a) * 29 * .62]);
+    poly([[-28, 7], ...ring, [28, 7]], "#9b6a43");
+    /* 內野草皮 */
+    const d = 27.43 / Math.SQRT2;
+    poly([[0, 1.5], [d - 1.4, d], [0, 2 * d - 2.2], [-d + 1.4, d]], "#357a39");
+    /* 投手丘 */
+    const mound = []; for (let a = 0; a < Math.PI * 2; a += .2) mound.push([Math.cos(a) * 2.7, 18.4 + Math.sin(a) * 2.7]);
+    poly(mound, "#a8744a");
+    poly([[-.3, 18.3], [.3, 18.3], [.3, 18.45], [-.3, 18.45]], "#f4f1e8");
+    /* 壘包 */
+    for (const b of [[d, d], [0, 2 * d], [-d, d]]) poly([[b[0] - .3, b[1]], [b[0], b[1] + .3], [b[0] + .3, b[1]], [b[0], b[1] - .3]], "#f4f1e8");
+    /* 邊線 */
+    x.strokeStyle = "rgba(255,255,255,.85)"; x.lineWidth = 1.5;
+    for (const s of [1, -1]) { const a = P(0, 0, 0), b = P(s * 90, 0, 90); x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke(); }
+    /* 本壘附近紅土與打擊區 */
+    const homeDirt = []; for (let a = 0; a < Math.PI * 2; a += .15) homeDirt.push([Math.cos(a) * 3.9, Math.sin(a) * 3.9]);
+    poly(homeDirt, "#a06d45");
+    x.strokeStyle = "rgba(255,255,255,.8)"; x.lineWidth = 2;
+    for (const s of [-1, 1]) {
+      const pts = [[s * .15 * 1 + s * .216, -.9], [s * 1.37, -.9], [s * 1.37, .9], [s * .366, .9], [s * .366, -.9]];
+      x.beginPath(); pts.forEach((p, i) => { const q = P(p[0], 0, p[1]); i ? x.lineTo(q.x, q.y) : x.moveTo(q.x, q.y); }); x.stroke();
+    }
+    poly([[-.216, .216], [.216, .216], [.216, 0], [0, -.216], [-.216, 0]], "#f4f1e8");
+    return c;
+  }
+
+  /* 人物 */
+  function limb(x, a, b, w, col){ x.strokeStyle = col; x.lineWidth = w; x.lineCap = "round"; x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke(); }
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const ease = t => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t);
+
+  /* 投手：t 0~1 為投球動作，0.78 出手 */
+  function drawPitcher(x, t){
+    const side = (store.play.phand || "R") === "R" ? -1 : 1, rel = slotRel();
+    const base = { X:0, Z:18.6 };
+    const K = [
+      { t:0,   hand:[.05, 1.25], glove:[-.05, 1.25], knee:[.12, .5], foot:[.18, 0], lean:0 },
+      { t:.35, hand:[.08, 1.2],  glove:[-.02, 1.25], knee:[-.22, .95], foot:[-.18, .55], lean:0 },
+      { t:.62, hand:[.75, 1.75], glove:[-.6, 1.35], knee:[-.4, .45], foot:[-.55, 0], lean:.1 },
+      { t:.78, hand:[Math.abs(rel.X), rel.Y], glove:[-.35, 1.05], knee:[-.35, .45], foot:[-.55, 0], lean:.25 },
+      { t:1,   hand:[-.35, .75], glove:[-.2, 1.0], knee:[-.3, .45], foot:[-.55, 0], lean:.35 }
+    ];
+    let i = 0; while (i < K.length - 2 && t > K[i + 1].t) i++;
+    const a = K[i], b = K[i + 1], u = ease((t - a.t) / (b.t - a.t));
+    const L = k => [lerp(a[k][0], b[k][0], u), lerp(a[k][1], b[k][1], u)];
+    const hand = L("hand"), glove = L("glove"), knee = L("knee"), foot = L("foot"), lean = lerp(a.lean, b.lean, u);
+    const w = (lx, ly) => P(base.X + side * lx, ly, base.Z - lean * ly * .3);
+    const hip = w(0, .95), neck = w(0, 1.5 - lean * .1), head = w(0, 1.72 - lean * .15), sc = w(0, 1).s;
+    const col = "#e8edf3", dark = "#1d4f91";
+    limb(x, hip, w(-.12, .5), sc * .14, dark); limb(x, w(-.12, .5), w(-.15, 0), sc * .12, dark);
+    limb(x, hip, w(knee[0], knee[1]), sc * .14, dark); limb(x, w(knee[0], knee[1]), w(foot[0], foot[1]), sc * .12, dark);
+    limb(x, hip, neck, sc * .3, col);
+    limb(x, neck, w(glove[0], glove[1]), sc * .1, col);
+    x.fillStyle = "#6b4a2b"; x.beginPath(); x.arc(w(glove[0], glove[1]).x, w(glove[0], glove[1]).y, sc * .09, 0, Math.PI * 2); x.fill();
+    limb(x, neck, w(hand[0], hand[1]), sc * .1, col);
+    x.fillStyle = "#f0c8a0"; x.beginPath(); x.arc(head.x, head.y, sc * .12, 0, Math.PI * 2); x.fill();
+    x.fillStyle = dark; x.beginPath(); x.arc(head.x, head.y - sc * .04, sc * .125, Math.PI, 0); x.fill();
+    if (t < .78) { const hp = w(hand[0], hand[1]); x.fillStyle = "#fff"; x.beginPath(); x.arc(hp.x, hp.y, Math.max(1.5, sc * .04), 0, Math.PI * 2); x.fill(); }
+  }
+
+  /* 打者：swing 0~1（揮棒進度）；lean 前傾 */
+  function drawBatter(x, swing, lean, takeFlinch){
+    const hand = handOf(), s = hand === "R" ? -1 : 1;
+    const bx = s * .8, bz = 1.6;  /* 畫面效果：打者畫在稍遠處，才不會擋住好球帶 */
+    const w = (lx, ly, lz = 0) => P(bx + s * lx + s * lean * .25 * (ly > .9 ? 1 : 0), ly - lean * .08 * (ly > .9 ? 1 : 0), bz + lz);
+    const sc = w(0, 1).s;
+    const pants = "#e9e9e9", shirt = "#9e2b2b";
+    limb(x, w(.05, .95), w(.15, .5, -.15), sc * .15, pants); limb(x, w(.15, .5, -.15), w(.12, 0, -.3), sc * .13, pants);
+    limb(x, w(-.05, .95), w(-.15, .5, .2), sc * .15, pants); limb(x, w(-.15, .5, .2), w(-.12, 0, .35), sc * .13, pants);
+    limb(x, w(0, .95), w(0, 1.45), sc * .27, shirt);
+    const head = w(0, 1.65 + takeFlinch * .02);
+    x.fillStyle = "#1d1d1d"; x.beginPath(); x.arc(head.x, head.y, sc * .14, 0, Math.PI * 2); x.fill();
+    x.fillStyle = "#2a2a2a"; x.fillRect(head.x - sc * .02 * s - sc * .1, head.y + sc * .02, sc * .2, sc * .05);
+    /* 手與球棒：從肩後上方揮到身體前方 */
+    const ang = lerp(-2.3, 1.2, ease(swing));
+    const handsP = { lx: lerp(.15, -.25, ease(swing)), ly: lerp(1.35, 1.0, ease(swing)), lz: lerp(.1, -.25, ease(swing)) };
+    const hp = w(handsP.lx, handsP.ly, handsP.lz);
+    limb(x, w(0, 1.4), hp, sc * .1, shirt);
+    const len = .85;
+    const tipW = { lx: handsP.lx + Math.cos(ang) * len * -1, ly: handsP.ly + Math.sin(-ang) * len * .45 + (swing < .05 ? .55 : 0) * (1 - swing * 10), lz: handsP.lz + Math.sin(ang) * -len * .5 };
+    const tip = w(tipW.lx, tipW.ly, tipW.lz);
+    limb(x, hp, tip, sc * .07, "#c8925a");
+    x.fillStyle = "#3b2a1a"; x.beginPath(); x.arc(hp.x, hp.y, sc * .06, 0, Math.PI * 2); x.fill();
+  }
+
+  /* 捕手手套 */
+  function drawMitt(x, c, pop){
+    const wp = cellWorld(c), p = P(wp.X, wp.Y, -.15), r = p.s * .075 * (1 + pop * .15);
+    x.save(); x.globalAlpha = .88; x.fillStyle = "#7a4f2a"; x.beginPath(); x.ellipse(p.x, p.y, r, r * .9, 0, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = "#4a2f17"; x.lineWidth = 2; x.stroke();
+    x.fillStyle = "#5a3a1e"; x.beginPath(); x.ellipse(p.x, p.y, r * .5, r * .45, 0, 0, Math.PI * 2); x.fill();
+    x.restore();
+  }
+
+  /* 好球帶格子 */
+  function drawZone(x, alpha){
+    const g = game; if (!g) return;
+    x.save(); x.globalAlpha = alpha;
+    for (let row = 0; row < 5; row++) for (let col = 0; col < 5; col++) {
+      const r = cellRect(col, row), z = col >= 1 && col <= 3 && row >= 1 && row <= 3;
+      const cx = handOf() === "R" ? col : 4 - col;
+      const sel = g.sel.cell && g.sel.cell.x === cx && g.sel.cell.y === row && !busy;
+      x.fillStyle = sel ? "rgba(242,204,96,.45)" : z ? "rgba(255,255,255,.13)" : "rgba(255,255,255,.05)";
+      x.fillRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
+      x.strokeStyle = sel ? "#f2cc60" : z ? "rgba(255,255,255,.75)" : "rgba(255,255,255,.3)"; x.lineWidth = sel ? 3 : z ? 1.6 : 1;
+      x.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
+    }
+    /* 已投過的球 */
+    const n = busy ? g.pitches.length - 1 : g.pitches.length;
+    g.pitches.slice(0, n).forEach(p => {
+      const wpos = cellWorld(p), q = P(wpos.X, wpos.Y, 0);
+      x.fillStyle = { swstr:"#f2cc60", called:"#f2cc60", foul:"#b9a56a", ball:"#3fb950", hit:"#f85149", out:"#58a6ff" }[p.res] || "#fff";
+      x.beginPath(); x.arc(q.x, q.y, Math.max(9, q.s * .045), 0, Math.PI * 2); x.fill();
+      x.fillStyle = "#111"; x.font = `bold ${Math.round(W * .03)}px sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(p.n, q.x, q.y + .5);
+    });
+    x.restore();
+    const r0 = cellRect(0, 4), r4 = cellRect(4, 4);
+    x.fillStyle = "rgba(255,255,255,.8)"; x.font = `${Math.round(W * .032)}px sans-serif`; x.textBaseline = "alphabetic";
+    const inL = handOf() === "R";
+    x.textAlign = "left"; x.fillText(inL ? "← 內角" : "← 外角", r0.x, r0.y + r0.h + W * .045);
+    x.textAlign = "right"; x.fillText(inL ? "外角 →" : "內角 →", r4.x + r4.w, r4.y + r4.h + W * .045);
+  }
+
+  /* 漫畫風爆炸字框 */
+  function burst(x, text, color, k){
+    const cx = W / 2, cy = H * .3, R = W * .2 * (.6 + .4 * ease(k * 3));
+    x.save(); x.translate(cx, cy); x.rotate(-.06);
+    x.beginPath();
+    const n = 18; for (let i = 0; i <= n * 2; i++) { const a = i / (n * 2) * Math.PI * 2, r = i % 2 ? R * .72 : R * (1 + (i % 4 === 0 ? .12 : 0)); x.lineTo(Math.cos(a) * r * 1.35, Math.sin(a) * r * .8); }
+    x.closePath(); x.fillStyle = "#fff"; x.fill(); x.lineWidth = 4; x.strokeStyle = "#111"; x.stroke();
+    x.fillStyle = color; x.font = `900 ${Math.round(R * .5)}px sans-serif`; x.textAlign = "center"; x.textBaseline = "middle";
+    x.lineWidth = 5; x.strokeStyle = "#111"; x.strokeText(text, 0, 2); x.fillText(text, 0, 2);
+    x.restore();
+  }
+
+  /* 球路 */
+  const BRK = {
+    "四縫速球":[-.05, -.1], "二縫速球":[-.16, .1], "伸卡球":[-.18, .18], "卡特球":[.12, .03], "噴射球":[0, .04], "上飄速球":[-.05, -.22],
+    "滑球":[.25, .12], "橫掃球":[.42, .05], "滑曲球":[.28, .28], "曲球":[.12, .45, .25], "彈指曲球":[.1, .48, .2], "慢速曲球":[.1, .55, .5],
+    "變速球":[-.14, .22], "圓圈變速球":[-.2, .24], "指叉球":[0, .36], "快速指叉球":[-.04, .28], "螺旋球":[-.28, .22], "掌心球":[-.06, .26],
+    "蝴蝶球":[0, .15], "小便球":[0, .3, 1.4]
+  };
+  const DEF_KMH = { "四縫速球":128, "二縫速球":125, "伸卡球":124, "卡特球":122, "噴射球":126, "上飄速球":120, "滑球":112, "橫掃球":108, "滑曲球":106,
+    "曲球":100, "彈指曲球":104, "慢速曲球":88, "變速球":110, "圓圈變速球":108, "指叉球":115, "快速指叉球":120, "螺旋球":105, "掌心球":100, "蝴蝶球":95, "小便球":70 };
+  function kmhFor(type){
+    const pt = store.pitchers.find(p => p.id === store.play.pit);
+    const reg = pt && (pt.pitches || []).find(p => p.type === type && +p.kmh);
+    return reg ? +reg.kmh : (DEF_KMH[type] || 115);
+  }
+  function ballPos(pt, u){
+    const side = (store.play.phand || "R") === "R" ? 1 : -1, low = store.play.slot === "sub" ? 2 : store.play.slot === "side" ? 1 : 0;
+    const r = slotRel(), t = cellWorld(pt), b = BRK[pt.type] || [.1, .15];
+    const dx = b[0] * side * (low ? 1.3 : 1), drop = b[1] * (low ? .6 : 1) + (low === 2 && isFast(pt.type) ? -.12 : 0), arc = b[2] || 0;
+    const X = r.X + (t.X - r.X) * u - dx * (u - Math.pow(u, 2.5));
+    let Y = r.Y + (t.Y - r.Y) * u + drop * (u - Math.pow(u, 2.2)) * 1.6 + arc * Math.sin(Math.PI * Math.min(u, 1));
+    let x2 = X; if (pt.type === "蝴蝶球") x2 += Math.sin(u * 19) * .05 * u;
+    return { X:x2, Y, Z: REL_Z * (1 - u) };
+  }
+
+  /* 每一球的動畫腳本 */
+  function script(pt){
+    const kmh = kmhFor(pt.type), flight = Math.min(1500, 18 / (kmh / 3.6) * 1650);
+    const swingShift = { whiffEarly:-130, foulEarly:-60, whiffLate:110, foulLate:60, takeLate:999, lunge:-90 }[pt.cue] || 0;
+    const swung = pt.swing || pt.cue === "halfSwing";
+    const contact = ["foul", "hit", "out"].includes(pt.res);
+    const R = rng(pt.n * 97 + pt.x * 7 + pt.y);
+    let fly = null;
+    if (contact) {
+      if (pt.res === "foul") fly = { X:(R() < .5 ? -1 : 1) * (6 + R() * 10), Y:8 + R() * 10, Z:(R() < .5 ? -6 : 8), t:800 };
+      else if (pt.res === "hit") fly = { X:(R() - .5) * 50, Y:0, Z:45 + R() * 35, apex:6 + R() * 18, t:1300 };
+      else fly = R() < .5 ? { X:(R() - .5) * 30, Y:0, Z:20 + R() * 12, apex:.4, t:900 } : { X:(R() - .5) * 20, Y:0, Z:25 + R() * 30, apex:18 + R() * 8, t:1500 };
+    }
+    const label = pt.res === "hit" ? "安打！" : pt.res === "out" ? "出局！" : pt.res === "foul" ? "界外" : pt.res === "ball" ? "壞球" : pt.res === "swstr" ? "揮空！" : "好球！";
+    const color = { hit:"#f85149", out:"#1f6feb", foul:"#9a6700", ball:"#1a7f37", swstr:"#d29922", called:"#d29922" }[pt.res];
+    return { pt, kmh, flight, wind:950, swingAt: swung ? swingShift : null, half: pt.cue === "halfSwing", lunge: pt.cue === "lunge", contact, fly, label, color, post: contact ? fly.t : 420 };
+  }
+
+  let rafId = 0, startT = 0, sc = null, done = null, skipReq = false;
+  function frame(now){
+    const cv = document.getElementById("c3d"); if (!cv) { rafId = requestAnimationFrame(frame); return; }
+    const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.drawImage(bg, 0, 0, W, H);
+    const t = now - startT, relT = sc.wind * .78, arrive = relT + sc.flight, end = arrive + sc.post + 900;
+    if (skipReq || t > end) { finish(); return; }
+    drawPitcher(x, Math.min(1, t / sc.wind));
+    /* 球 */
+    let ballDrawn = null;
+    if (t >= relT) {
+      const u = (t - relT) / sc.flight;
+      if (u <= 1) ballDrawn = ballPos(sc.pt, u);
+      else if (sc.contact) {
+        const k = Math.min(1, (t - arrive) / sc.fly.t), o = ballPos(sc.pt, 1);
+        const apex = sc.fly.apex !== undefined ? sc.fly.apex : sc.fly.Y;
+        ballDrawn = { X: lerp(o.X, sc.fly.X, k), Y: lerp(o.Y, sc.fly.Y, k) + apex * 4 * k * (1 - k), Z: lerp(.2, sc.fly.Z, k) };
+      } else ballDrawn = ballPos(sc.pt, 1);
+    }
+    /* 打者揮棒 */
+    let sw = 0;
+    if (sc.swingAt !== null) { const c = arrive + sc.swingAt; sw = Math.max(0, Math.min(1, (t - (c - 160)) / 320)); if (sc.half) sw = Math.min(sw, .35); }
+    const lean = sc.lunge && sw > .5 ? (sw - .5) * 2 : 0;
+    drawZone(x, .9);
+    if (t > arrive && !sc.contact) drawMitt(x, sc.pt, Math.max(0, 1 - (t - arrive) / 150));
+    else drawMitt(x, sc.pt.aimX !== undefined ? { x:sc.pt.aimX, y:sc.pt.aimY } : sc.pt, 0);
+    if (ballDrawn) {
+      const g0 = P(ballDrawn.X, 0, ballDrawn.Z), q = P(ballDrawn.X, ballDrawn.Y, ballDrawn.Z);
+      x.fillStyle = "rgba(0,0,0,.3)"; x.beginPath(); x.ellipse(g0.x, g0.y, q.s * .05, q.s * .02, 0, 0, Math.PI * 2); x.fill();
+      const behindBatter = ballDrawn.Z < .4;
+      if (!behindBatter) drawBall(x, q);
+      drawBatter(x, sw, lean, 0);
+      if (behindBatter) drawBall(x, q);
+    } else drawBatter(x, sw, lean, 0);
+    /* 球速 */
+    if (t >= relT) {
+      x.fillStyle = "rgba(13,17,23,.75)"; x.fillRect(W - W * .3, W * .03, W * .27, W * .09);
+      x.fillStyle = "#f2cc60"; x.font = `900 ${Math.round(W * .055)}px sans-serif`; x.textAlign = "right"; x.textBaseline = "middle";
+      x.fillText(sc.kmh + " km/h", W - W * .05, W * .075);
+      x.fillStyle = "rgba(13,17,23,.75)"; x.fillRect(W - W * .3, W * .12, W * .27, W * .06);
+      x.fillStyle = "#e6edf3"; x.font = `bold ${Math.round(W * .034)}px sans-serif`; x.textAlign = "right"; x.fillText(sc.pt.type, W - W * .05, W * .152);
+    }
+    if (t > arrive + 120) burst(x, sc.label, sc.color, (t - arrive - 120) / 1000);
+    rafId = requestAnimationFrame(frame);
+  }
+  function drawBall(x, q){
+    const r = Math.max(2, q.s * .037);
+    x.fillStyle = "#fbfaf5"; x.beginPath(); x.arc(q.x, q.y, r, 0, Math.PI * 2); x.fill();
+    if (r > 4) { x.strokeStyle = "#d63b3b"; x.lineWidth = Math.max(1, r / 7);
+      x.beginPath(); x.arc(q.x - r * .9, q.y, r * .7, -.9, .9); x.stroke(); x.beginPath(); x.arc(q.x + r * .9, q.y, r * .7, Math.PI - .9, Math.PI + .9); x.stroke(); }
+  }
+  function finish(){
+    cancelAnimationFrame(rafId); busy = false; skipReq = false;
+    const cb = done; done = null; if (cb) cb();
+  }
+
+  /* 靜態畫面 */
+  function still(){
+    const cv = document.getElementById("c3d"); if (!cv) return;
+    size(cv);
+    if (busy) return;
+    const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.drawImage(bg, 0, 0, W, H);
+    drawPitcher(x, 0);
+    drawZone(x, 1);
+    if (game && game.sel.cell) drawMitt(x, game.sel.cell, 0);
+    drawBatter(x, 0, 0, 0);
+  }
+  function hit(ev){
+    const cv = document.getElementById("c3d"); if (!cv || busy || !game) return null;
+    const b = cv.getBoundingClientRect(), mx = ev.clientX - b.left, my = ev.clientY - b.top;
+    for (let row = 0; row < 5; row++) for (let col = 0; col < 5; col++) {
+      const r = cellRect(col, row);
+      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) return { x: handOf() === "R" ? col : 4 - col, y: row };
+    }
+    return null;
+  }
+  return {
+    get busy(){ return busy; },
+    mount: still,
+    hit,
+    arm(){ busy = true; },
+    play(pt, cb){
+      const cv = document.getElementById("c3d"); if (!cv) { busy = false; cb && cb(); return; }
+      size(cv); busy = true; done = cb; sc = script(pt); startT = performance.now(); skipReq = false;
+      cancelAnimationFrame(rafId); rafId = requestAnimationFrame(frame);
+    },
+    skip(){ if (busy) skipReq = true; }
+  };
+})();
+
+/* 掛到原本的畫面流程上 */
+const _render2d = render;
+render = function(k){ _render2d(k); S3.mount(); };
+window.addEventListener("resize", () => S3.mount());
+document.addEventListener("pointerup", e => {
+  if (e.target.id !== "c3d") return;
+  if (S3.busy) { S3.skip(); return; }
+  const c = S3.hit(e);
+  if (c && game && !game.end) { game.sel.cell = c; render(true); }
+});
+
+/* ---------- 設定 ---------- */
+function viewMore(){
+  return `<div class="sec">配球資料庫</div>
+    <p class="small muted" style="margin-bottom:10px">練習時的判讀和建議都來自這 ${DATA.reduce((n, c) => n + c.items.length, 0)} 條資料。</p>
+    <button class="btn" data-go="#/book">查看資料庫</button>
+    <div class="sec">備份與搬移</div>
+    <p class="small muted" style="margin-bottom:10px">投手和對手資料只存在這支手機的瀏覽器裡。換手機、清除瀏覽資料前，或要分享給隊友時，請先匯出。</p>
+    <button class="btn" data-act="export">匯出資料（JSON 檔）</button>
+    <button class="btn" data-act="import">匯入資料</button>
+    <input type="file" id="file" accept="application/json,.json" hidden>
+    <div class="sec">加到主畫面</div>
+    <p class="small"><b>iPhone（Safari）</b></p>
+    <ol class="steps small"><li>點下方的「分享」按鈕</li><li>選「加入主畫面」</li><li>點「加入」</li></ol>
+    <p class="small" style="margin-top:10px"><b>Android（Chrome）</b></p>
+    <ol class="steps small"><li>點右上角「⋮」</li><li>選「加到主畫面」或「安裝應用程式」</li></ol>
+    <p class="small muted" style="margin-top:10px">離線狀態：<span id="swState">檢查中…</span></p>
+    <div class="sec">關於</div>
+    <p class="small muted">瘋狗野球 配球練習・投捕群學習參考<br>目前 ${DATA.filter(c => !c.pending).length} 章 ${DATA.reduce((n, c) => n + c.items.length, 0)} 條，${store.pitchers.length} 位投手，${store.opponents.length} 支對手球隊</p>`;
+}
+
+/* ---------- 路由與繪製 ---------- */
+function route(){
+  const h = location.hash.replace(/^#\/?/, "").split("/");
+  return { page: h[0] || "home", id: h[1] || "" };
+}
+function render(keepScroll){
+  const r = route(), y = window.scrollY;
+  const tab = { home:"play", titles:"play", book:"more", c:"more", pitchers:"pitchers", p:"pitchers", opp:"opp", o:"opp", more:"more" }[r.page] || "book";
+  document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.dataset.tab === tab));
+  const isBook = r.page === "book" || r.page === "c";
+  $("#tools").hidden = !isBook;
+  const searching = isBook && (ui.q.trim() || ui.count);
+  let title = "配球資料庫", back = "", html;
+  if (searching) { back = "#/book"; html = viewResults(); }
+  else if (r.page === "c") { const ch = DATA.find(c => c.id === r.id); title = ch ? ch.id + "　" + ch.title : title; back = "#/book"; html = viewChapter(r.id); }
+  else if (r.page === "pitchers") { title = "投手名單"; html = viewPitchers(); }
+  else if (r.page === "p") { title = "編輯投手"; back = "#/pitchers"; html = viewPitcher(r.id); }
+  else if (r.page === "opp") { title = "對手球隊"; html = viewOpps(); }
+  else if (r.page === "o") { title = "對手打者"; back = "#/opp"; html = viewOpp(r.id); }
+  else if (r.page === "more") { title = "設定"; html = viewMore(); }
+  else if (r.page === "titles") { title = "稱號收藏"; back = "#/"; html = viewTitles(); }
+  else if (r.page === "book") { back = "#/more"; html = viewHome(); }
+  else { title = "瘋狗野球 配球練習"; html = viewPlay(); }
+  $("#title").textContent = title;
+  const b = $("#back"); b.hidden = !back; b.dataset.go = back;
+  $("#view").innerHTML = html;
+  $("#qx").hidden = !ui.q;
+  $("#chips").innerHTML = [...COUNTS, "其他"].map(c => `<button class="chip${ui.count === c ? " on" : ""}" data-count="${c}">${c}</button>`).join("");
+  $("#pov").hidden = !store.pitchers.length;
+  $("#povSel").innerHTML = `<option value="">不指定</option>` + store.pitchers.map(p => `<option value="${p.id}"${p.id === store.pov ? " selected" : ""}>${esc(p.name || "未命名")}${p.no ? " #" + esc(p.no) : ""}</option>`).join("");
+  if (r.page === "more") swState();
+  window.scrollTo(0, keepScroll ? y : 0);
+}
+const go = h => { if (location.hash === h) render(); else location.hash = h; };
+window.addEventListener("hashchange", () => render());
+
+/* ---------- 事件 ---------- */
+$("#q").addEventListener("input", e => { ui.q = e.target.value; render(); });
+$("#qx").addEventListener("click", () => { ui.q = ""; $("#q").value = ""; render(); });
+$("#povSel").addEventListener("change", e => { store.pov = e.target.value; save(); render(true); });
+
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-go]");
+  if (g) { if (g.id === "back" && (ui.q || ui.count)) { ui.q = ""; ui.count = ""; $("#q").value = ""; } if (g.dataset.go) go(g.dataset.go); return; }
+  const c = e.target.closest("[data-count]");
+  if (c) { ui.count = ui.count === c.dataset.count ? "" : c.dataset.count; render(); return; }
+  const a = e.target.closest("[data-act]");
+  if (!a) return;
+  const r = route(), i = +a.dataset.i, act = a.dataset.act;
+  const p = store.pitchers.find(x => x.id === r.id), o = store.opponents.find(x => x.id === r.id);
+  switch (act) {
+    case "addPitcher": { const n = { id:uid(), name:"", no:"", hand:"R", note:"", pitches:[{ type:"四縫速球", kmh:"", out:false }] }; store.pitchers.push(n); save(); go("#/p/" + n.id); return; }
+    case "hand": p.hand = a.dataset.v; break;
+    case "slot": p.slot = a.dataset.v; break;
+    case "addPitch": p.pitches.push({ type:"滑球", kmh:"", out:false }); break;
+    case "delPitch": p.pitches.splice(i, 1); break;
+    case "out": p.pitches[i].out = !p.pitches[i].out; break;
+    case "delPitcher": if (!confirm("確定刪除「" + (p.name || "未命名") + "」？")) return;
+      store.pitchers = store.pitchers.filter(x => x !== p); if (store.pov === p.id) store.pov = ""; save(); go("#/pitchers"); return;
+    case "addOpp": { const n = { id:uid(), name:"", batters:[] }; store.opponents.push(n); save(); go("#/o/" + n.id); return; }
+    case "addBat": o.batters.push({ no:"", bat:"R", note:"" }); break;
+    case "delBat": o.batters.splice(i, 1); break;
+    case "bat": o.batters[i].bat = a.dataset.v; break;
+    case "bulkAdd": case "bulkReplace": {
+      const list = parseBulk($("#bulk").value);
+      if (!list.length) { toast("沒有讀到背號，請一行一位"); return; }
+      if (act === "bulkReplace") { if (o.batters.length && !confirm("取代現有的 " + o.batters.length + " 位打者？")) return; o.batters = list; }
+      else o.batters.push(...list);
+      toast("已加入 " + list.length + " 位打者"); break; }
+    case "delOpp": if (!confirm("確定刪除「" + (o.name || "未命名球隊") + "」？")) return;
+      store.opponents = store.opponents.filter(x => x !== o); save(); go("#/opp"); return;
+    case "export": exportData(); return;
+    case "import": $("#file").click(); return;
+    default: return;
+  }
+  save(); render(true);
+});
+
+/* 文字欄位：邊打邊存，不重繪（避免鍵盤收起） */
+document.addEventListener("input", e => {
+  const t = e.target, r = route();
+  const p = store.pitchers.find(x => x.id === r.id), o = store.opponents.find(x => x.id === r.id);
+  if (t.dataset.f && p) p[t.dataset.f] = t.value;
+  else if (t.dataset.pf && p) p.pitches[+t.dataset.i][t.dataset.pf] = t.value;
+  else if (t.dataset.of && o) o[t.dataset.of] = t.value;
+  else if (t.dataset.bf && o) o.batters[+t.dataset.i][t.dataset.bf] = t.value;
+  else return;
+  save();
+});
+document.addEventListener("change", e => {
+  if (e.target.id !== "file") return;
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(txt => {
+    const d = JSON.parse(txt);
+    if (!Array.isArray(d.pitchers) || !Array.isArray(d.opponents)) throw 0;
+    if (!confirm(`匯入 ${d.pitchers.length} 位投手、${d.opponents.length} 支球隊，並取代目前的資料？`)) return;
+    Object.assign(store, { pitchers:d.pitchers, opponents:d.opponents, pov:"" }); save(); render(); toast("匯入完成");
+  }).catch(() => toast("這不是有效的備份檔")).finally(() => { e.target.value = ""; });
+});
+async function exportData(){
+  const name = "配球秘笈備份-" + new Date().toISOString().slice(0, 10) + ".json";
+  const body = JSON.stringify({ pitchers:store.pitchers, opponents:store.opponents }, null, 2);
+  const file = new File([body], name, { type:"application/json" });
+  try { if (navigator.canShare && navigator.canShare({ files:[file] })) { await navigator.share({ files:[file], title:name }); return; } }
+  catch (e) { if (e.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast("已匯出 " + name);
+}
+
+/* ---------- 離線（service worker 只在 https 或 localhost 生效） ---------- */
+const canSW = "serviceWorker" in navigator && (location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname));
+if (canSW) navigator.serviceWorker.register("sw.js").catch(() => {});
+function swState(){
+  const el = $("#swState"); if (!el) return;
+  if (!canSW) { el.textContent = location.protocol === "file:" ? "直接開啟檔案（本來就不需要網路）" : "這個網址不支援離線快取（需要 https）"; return; }
+  navigator.serviceWorker.getRegistration().then(r => { el.textContent = r && r.active ? "已快取，沒有網路也能開 ✓" : "準備中，重新整理一次即可"; });
+}
+
+render();
+</script>
+</body>
+</html>
