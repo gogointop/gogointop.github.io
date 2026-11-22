@@ -187,6 +187,20 @@ b.r-swstr,b.r-called,b.r-foul{color:var(--accent)} b.r-ball{color:var(--next)} b
 .unlock{display:flex;gap:12px;align-items:center;border:2px solid var(--accent);background:rgba(242,204,96,.15);border-radius:14px;padding:10px 14px;margin-bottom:10px;animation:pop .5s ease-out}
 .unlock span{font-size:2.2rem}
 @keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
+.stage3d{display:flex;justify-content:center;margin:6px 0;touch-action:manipulation}
+#c3d{border-radius:14px;border:1px solid var(--line);max-width:100%}
+.brief{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 12px;font-size:.88rem;margin-bottom:4px}
+.brief .bn{color:var(--next);font-weight:700;margin-top:2px}
+.more{margin-top:8px}
+.dock{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:5;background:rgba(13,17,23,.96);border-top:1px solid var(--line);padding:8px 12px;backdrop-filter:blur(6px)}
+.dock .tgrid.pt{display:flex;gap:8px;overflow-x:auto;margin:0 auto 8px;max-width:720px;scrollbar-width:none}
+.dock .tgrid.pt::-webkit-scrollbar{display:none}
+.dock .tgrid.pt button{flex:0 0 auto;min-width:92px;min-height:46px;padding:0 12px}
+.dock .drow{display:flex;gap:8px;max-width:720px;margin:0 auto}
+.dock .drow .btn{margin:0;min-height:52px}
+.dock .drow .btn.pri{flex:1}
+.dock .drow .btn.rp{flex:0 0 56px;font-size:1.3rem}
+.dock-space{height:130px}
 .rv{border-bottom:1px solid var(--line);padding:8px 2px}
 
 /* 底部分頁 */
@@ -898,7 +912,7 @@ function throwPitch(){
   else { res = "ball"; cue = (two && tempting) ? "eyeTake" : (tempting && Math.random() < .35) ? "halfSwing" : "takeBall"; }
 
   g.guessed = guessed;
-  g.pitches.push({ n:g.pitches.length + 1, type, x:c.x, y:c.y, guessed, miss: c === aim ? "" : locName(aim), res, cue, swing, b:g.b, s:g.s, grade:ev.grade, evalTxt:ev.txt,
+  g.pitches.push({ n:g.pitches.length + 1, type, x:c.x, y:c.y, aimX:aim.x, aimY:aim.y, guessed, miss: c === aim ? "" : locName(aim), res, cue, swing, b:g.b, s:g.s, grade:ev.grade, evalTxt:ev.txt,
     adv:{ next:a.it.next, read:a.it.read, loc:a.loc, types:adviceTypes(a) } });
   g.ff = (res === "foul" && two) ? g.ff + 1 : 0;
   if (res === "swstr" || res === "called") g.s++;
@@ -939,7 +953,7 @@ const dots = (n, max, cls) => Array.from({ length:max }, (_, i) => `<i class="${
 
 function viewPlay(){
   if (!game) return viewSetup();
-  return game.end ? viewDone() : viewLive();
+  return game.end && !S3.busy ? viewDone() : viewLive();
 }
 function viewSetup(){
   const p = store.play;
@@ -968,6 +982,7 @@ function viewSetup(){
     ${titleCard(p.level)}`;
 }
 function fieldHtml(g, live){
+  if (live) return `<div class="stage3d"><canvas id="c3d" aria-label="球場，點好球帶格子選位置"></canvas></div>`;
   const P = g.prof;
   let cells = "";
   for (let y = 0; y < 5; y++) for (let col = 0; col < 5; col++) {
@@ -996,9 +1011,14 @@ function viewLive(){
       ${a.slot ? `<div><span class="k">角度</span>${esc(a.slot)}</div>` : ""}</div>` : "";
   return `<div class="sb"><div class="cnt"><span>B</span>${dots(g.b, 3, "b")}<span>S</span>${dots(g.s, 2, "s")}</div>
       <div class="who">${g.level !== "am" ? LEVELS[g.level] + "・" : ""}${g.prof.hand === "R" ? "右打者" : "左打者"}（${g.same ? "同側" : "異側"}）・第 ${g.pitches.length + 1} 球</div><button data-g="quit">放棄</button></div>
-    ${fb}${ob}${adv}${fieldHtml(g, true)}
-    <div class="tgrid pt">${store.play.types.map(t => `<button data-g="pt" data-v="${esc(t)}" class="${g.sel.type === t ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
-    <button class="btn pri" data-g="throw"${g.sel.type && g.sel.cell ? "" : " disabled"}>${g.sel.type && g.sel.cell ? "投球：" + esc(g.sel.type) + "・" + locName(g.sel.cell) : "先選球種，再點位置"}</button>`;
+    ${S3.busy ? "" : (last ? `<div class="brief"><span class="muted">第 ${last.n} 球</span> ${esc(last.type)}・${locName(last)} → <b class="r-${last.res}">${RES[last.res]}</b>${last.miss ? ` <span class="miss">控球偏了</span>` : ""}${hints ? `<div class="bn">💡 下一球：${esc(a.it.next)}</div>` : ""}</div>`
+      : hints ? `<div class="brief"><div class="bn">💡 第一球：${esc(a.it.next)}</div></div>` : "")}
+    ${fieldHtml(g, true)}
+    ${S3.busy ? "" : `<div class="more">${fb}${ob}${adv}</div>`}
+    <div class="dock"><div class="tgrid pt">${store.play.types.map(t => `<button data-g="pt" data-v="${esc(t)}" class="${g.sel.type === t ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
+    <div class="drow">${S3.busy ? `<button class="btn pri" disabled>投球中…（點球場可跳過）</button>` :
+      `<button class="btn pri" data-g="throw"${g.sel.type && g.sel.cell ? "" : " disabled"}>${g.sel.type && g.sel.cell ? "投球：" + esc(g.sel.type) + "・" + locName(g.sel.cell) : "先選球種，再點球場上的位置"}</button>
+      ${last ? `<button class="btn rp" data-g="replay" aria-label="重播第 ${last.n} 球">🔁</button>` : ""}`}</div></div><div class="dock-space"></div>`;
 }
 function viewDone(){
   const g = game, P = g.prof, sc = score(g), last = g.pitches[g.pitches.length - 1];
@@ -1048,7 +1068,9 @@ document.addEventListener("click", e => {
     case "share": shareCard(); return;
     case "pt": game.sel.type = v; render(true); return;
     case "cell": game.sel.cell = { x:+t.dataset.x, y:+t.dataset.y }; render(true); return;
-    case "throw": throwPitch(); render(); game.anim = false; return;
+    case "throw": if (S3.busy || !game.sel.type || !game.sel.cell) return; throwPitch(); game.anim = false; S3.arm(); render(true);
+      S3.play(game.pitches[game.pitches.length - 1], () => render(true)); return;
+    case "replay": if (S3.busy) return; { const lp = game.pitches[game.pitches.length - 1]; S3.arm(); render(true); S3.play(lp, () => render(true)); } return;
     default: return;
   }
   save(); render(true);
@@ -1204,6 +1226,376 @@ async function shareCard(){
   setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast("已存成圖片，可以傳到群組");
 }
 document.addEventListener("input", e => { if (e.target.id === "gName") { store.play.name = e.target.value.trim(); save(); } });
+
+/* ============================================================
+   擬 3D 球場（預覽版）
+   世界座標（公尺）：X 左右（捕手視角右邊為正）、Y 高度、Z 從本壘往投手方向
+   ============================================================ */
+const S3 = (() => {
+  const CAM = { z:-2.6, y:1.45 };
+  const ZONE = { w:.43 / 3, h:.55 / 3, top:1.05 };
+  const REL_Z = 16.9;
+  let W = 360, H = 450, F = 720, H0 = 200, dpr = 1, bg = null, bgKey = "";
+  let busy = false, anim = null, last = null;
+
+  /* 投影 */
+  const P = (X, Y, Z) => { const d = Math.max(.2, Z - CAM.z); return { x: W / 2 + F * X / d, y: H0 - F * (Y - CAM.y) / d, s: F / d }; };
+  const handOf = () => game ? game.prof.hand : "R";
+  const cellWorld = c => {
+    const col = handOf() === "R" ? c.x : 4 - c.x;
+    return { X:(col - 2) * ZONE.w, Y:ZONE.top + ZONE.h / 2 - c.y * ZONE.h };
+  };
+  const cellRect = (col, row) => {
+    const a = P((col - 2.5) * ZONE.w, ZONE.top + ZONE.h - row * ZONE.h, 0), b = P((col - 1.5) * ZONE.w, ZONE.top - row * ZONE.h, 0);
+    return { x:a.x, y:a.y, w:b.x - a.x, h:b.y - a.y };
+  };
+  const slotRel = () => {
+    const s = store.play.slot || "tq", side = (store.play.phand || "R") === "R" ? -1 : 1;
+    const o = { over:[.25, 1.95], tq:[.55, 1.75], side:[.95, 1.3], sub:[.8, .55] }[s];
+    return { X: side * o[0], Y: o[1] };
+  };
+
+  /* 隨機但固定的看台 */
+  function rng(seed){ let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+
+  function size(cv){
+    /* 球場要和底部的球種列、投球鍵同時留在畫面上 */
+    const room = window.innerHeight - 64 - 130 - 56 - 52 - 100;
+    let cw = Math.min(cv.parentElement.clientWidth, 460);
+    if (cw * 1.3 > room) cw = Math.max(240, Math.floor(room / 1.3));
+    const nk = cw + "x" + (window.devicePixelRatio || 1);
+    W = cw; H = Math.round(cw * 1.3); F = 1.85 * W; H0 = .40 * W; dpr = window.devicePixelRatio || 1;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    if (nk !== bgKey) { bg = drawBackground(); bgKey = nk; }
+  }
+
+  function drawBackground(){
+    const c = document.createElement("canvas"); c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+    const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const R = rng(7);
+    const hz = P(0, 0, 400).y;
+    /* 夜空 */
+    let g = x.createLinearGradient(0, 0, 0, hz); g.addColorStop(0, "#050a18"); g.addColorStop(1, "#1a2c4d");
+    x.fillStyle = g; x.fillRect(0, 0, W, hz + 2);
+    for (let i = 0; i < 40; i++) { x.fillStyle = `rgba(255,255,255,${.2 + R() * .5})`; x.fillRect(R() * W, R() * hz * .5, 1.2, 1.2); }
+    /* 看台：三層弧形 */
+    const standTop = hz - W * .17;
+    for (let tier = 0; tier < 3; tier++) {
+      const y0 = standTop + tier * W * .05, y1 = y0 + W * .055;
+      x.fillStyle = ["#1b2333", "#222b3d", "#283247"][tier]; x.fillRect(0, y0, W, y1 - y0 + 1);
+      const rows = 5, cols = Math.round(W / 4);
+      for (let r = 0; r < rows; r++) for (let k = 0; k < cols; k++) {
+        if (R() < .18) continue;
+        const hue = R(); x.fillStyle = hue < .35 ? "#c9b458" : hue < .55 ? "#3f7fbf" : hue < .7 ? "#c4504a" : hue < .85 ? "#d9d9d9" : "#5d8a4a";
+        x.globalAlpha = .55 + R() * .4;
+        x.fillRect(k * (W / cols) + R(), y0 + 2 + r * ((y1 - y0 - 3) / rows), W / cols - 1.3, (y1 - y0 - 3) / rows - 1);
+      }
+      x.globalAlpha = 1;
+      x.fillStyle = "rgba(0,0,0,.35)"; x.fillRect(0, y1 - 2, W, 2);
+    }
+    /* 計分板與燈塔 */
+    x.fillStyle = "#0b1220"; x.fillRect(W * .38, standTop - W * .085, W * .24, W * .07);
+    x.strokeStyle = "#f2cc60"; x.lineWidth = 1.5; x.strokeRect(W * .38, standTop - W * .085, W * .24, W * .07);
+    x.fillStyle = "#f2cc60"; x.font = `bold ${Math.round(W * .028)}px sans-serif`; x.textAlign = "center"; x.fillText("瘋狗野球", W / 2, standTop - W * .04);
+    for (const lx of [.06, .94]) {
+      x.fillStyle = "#2a3346"; x.fillRect(W * lx - 2, standTop - W * .16, 4, W * .16);
+      const gl = x.createRadialGradient(W * lx, standTop - W * .17, 2, W * lx, standTop - W * .17, W * .2);
+      gl.addColorStop(0, "rgba(255,250,220,.9)"); gl.addColorStop(.15, "rgba(255,250,220,.35)"); gl.addColorStop(1, "rgba(255,250,220,0)");
+      x.fillStyle = gl; x.fillRect(W * lx - W * .2, standTop - W * .37, W * .4, W * .4);
+      x.fillStyle = "#fffbe6"; x.fillRect(W * lx - W * .03, standTop - W * .18, W * .06, W * .022);
+    }
+    /* 全壘打牆 */
+    x.fillStyle = "#123326"; x.fillRect(0, hz - W * .022, W, W * .022);
+    x.fillStyle = "#f2cc60"; x.fillRect(0, hz - W * .022, W, 1.5);
+    /* 草地＋割草條紋 */
+    g = x.createLinearGradient(0, hz, 0, H); g.addColorStop(0, "#2c6b33"); g.addColorStop(1, "#3f8a3f");
+    x.fillStyle = g; x.fillRect(0, hz, W, H - hz);
+    for (let z = 120; z > 0; z -= 6) {
+      const a = P(0, 0, z).y, b = P(0, 0, z - 3).y;
+      x.fillStyle = "rgba(255,255,255,.035)"; x.fillRect(0, a, W, b - a);
+    }
+    /* 內野紅土：以投手丘為中心的大圓＋本壘附近 */
+    const poly = (pts, fill) => { x.beginPath(); pts.forEach((p, i) => { const q = P(p[0], 0, p[1]); i ? x.lineTo(q.x, q.y) : x.moveTo(q.x, q.y); }); x.closePath(); x.fillStyle = fill; x.fill(); };
+    const ring = [];
+    for (let a = -Math.PI * .27; a <= Math.PI * .27; a += .02) ring.push([Math.sin(a) * 29, 18.4 + Math.cos(a) * 29 * .62]);
+    poly([[-28, 7], ...ring, [28, 7]], "#9b6a43");
+    /* 內野草皮 */
+    const d = 27.43 / Math.SQRT2;
+    poly([[0, 1.5], [d - 1.4, d], [0, 2 * d - 2.2], [-d + 1.4, d]], "#357a39");
+    /* 投手丘 */
+    const mound = []; for (let a = 0; a < Math.PI * 2; a += .2) mound.push([Math.cos(a) * 2.7, 18.4 + Math.sin(a) * 2.7]);
+    poly(mound, "#a8744a");
+    poly([[-.3, 18.3], [.3, 18.3], [.3, 18.45], [-.3, 18.45]], "#f4f1e8");
+    /* 壘包 */
+    for (const b of [[d, d], [0, 2 * d], [-d, d]]) poly([[b[0] - .3, b[1]], [b[0], b[1] + .3], [b[0] + .3, b[1]], [b[0], b[1] - .3]], "#f4f1e8");
+    /* 邊線 */
+    x.strokeStyle = "rgba(255,255,255,.85)"; x.lineWidth = 1.5;
+    for (const s of [1, -1]) { const a = P(0, 0, 0), b = P(s * 90, 0, 90); x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke(); }
+    /* 本壘附近紅土與打擊區 */
+    const homeDirt = []; for (let a = 0; a < Math.PI * 2; a += .15) homeDirt.push([Math.cos(a) * 3.9, Math.sin(a) * 3.9]);
+    poly(homeDirt, "#a06d45");
+    x.strokeStyle = "rgba(255,255,255,.8)"; x.lineWidth = 2;
+    for (const s of [-1, 1]) {
+      const pts = [[s * .15 * 1 + s * .216, -.9], [s * 1.37, -.9], [s * 1.37, .9], [s * .366, .9], [s * .366, -.9]];
+      x.beginPath(); pts.forEach((p, i) => { const q = P(p[0], 0, p[1]); i ? x.lineTo(q.x, q.y) : x.moveTo(q.x, q.y); }); x.stroke();
+    }
+    poly([[-.216, .216], [.216, .216], [.216, 0], [0, -.216], [-.216, 0]], "#f4f1e8");
+    return c;
+  }
+
+  /* 人物 */
+  function limb(x, a, b, w, col){ x.strokeStyle = col; x.lineWidth = w; x.lineCap = "round"; x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke(); }
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const ease = t => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t);
+
+  /* 投手：t 0~1 為投球動作，0.78 出手 */
+  function drawPitcher(x, t){
+    const side = (store.play.phand || "R") === "R" ? -1 : 1, rel = slotRel();
+    const base = { X:0, Z:18.6 };
+    const K = [
+      { t:0,   hand:[.05, 1.25], glove:[-.05, 1.25], knee:[.12, .5], foot:[.18, 0], lean:0 },
+      { t:.35, hand:[.08, 1.2],  glove:[-.02, 1.25], knee:[-.22, .95], foot:[-.18, .55], lean:0 },
+      { t:.62, hand:[.75, 1.75], glove:[-.6, 1.35], knee:[-.4, .45], foot:[-.55, 0], lean:.1 },
+      { t:.78, hand:[Math.abs(rel.X), rel.Y], glove:[-.35, 1.05], knee:[-.35, .45], foot:[-.55, 0], lean:.25 },
+      { t:1,   hand:[-.35, .75], glove:[-.2, 1.0], knee:[-.3, .45], foot:[-.55, 0], lean:.35 }
+    ];
+    let i = 0; while (i < K.length - 2 && t > K[i + 1].t) i++;
+    const a = K[i], b = K[i + 1], u = ease((t - a.t) / (b.t - a.t));
+    const L = k => [lerp(a[k][0], b[k][0], u), lerp(a[k][1], b[k][1], u)];
+    const hand = L("hand"), glove = L("glove"), knee = L("knee"), foot = L("foot"), lean = lerp(a.lean, b.lean, u);
+    const w = (lx, ly) => P(base.X + side * lx, ly, base.Z - lean * ly * .3);
+    const hip = w(0, .95), neck = w(0, 1.5 - lean * .1), head = w(0, 1.72 - lean * .15), sc = w(0, 1).s;
+    const col = "#e8edf3", dark = "#1d4f91";
+    limb(x, hip, w(-.12, .5), sc * .14, dark); limb(x, w(-.12, .5), w(-.15, 0), sc * .12, dark);
+    limb(x, hip, w(knee[0], knee[1]), sc * .14, dark); limb(x, w(knee[0], knee[1]), w(foot[0], foot[1]), sc * .12, dark);
+    limb(x, hip, neck, sc * .3, col);
+    limb(x, neck, w(glove[0], glove[1]), sc * .1, col);
+    x.fillStyle = "#6b4a2b"; x.beginPath(); x.arc(w(glove[0], glove[1]).x, w(glove[0], glove[1]).y, sc * .09, 0, Math.PI * 2); x.fill();
+    limb(x, neck, w(hand[0], hand[1]), sc * .1, col);
+    x.fillStyle = "#f0c8a0"; x.beginPath(); x.arc(head.x, head.y, sc * .12, 0, Math.PI * 2); x.fill();
+    x.fillStyle = dark; x.beginPath(); x.arc(head.x, head.y - sc * .04, sc * .125, Math.PI, 0); x.fill();
+    if (t < .78) { const hp = w(hand[0], hand[1]); x.fillStyle = "#fff"; x.beginPath(); x.arc(hp.x, hp.y, Math.max(1.5, sc * .04), 0, Math.PI * 2); x.fill(); }
+  }
+
+  /* 打者：swing 0~1（揮棒進度）；lean 前傾 */
+  function drawBatter(x, swing, lean, takeFlinch){
+    const hand = handOf(), s = hand === "R" ? -1 : 1;
+    const bx = s * .8, bz = 1.6;  /* 畫面效果：打者畫在稍遠處，才不會擋住好球帶 */
+    const w = (lx, ly, lz = 0) => P(bx + s * lx + s * lean * .25 * (ly > .9 ? 1 : 0), ly - lean * .08 * (ly > .9 ? 1 : 0), bz + lz);
+    const sc = w(0, 1).s;
+    const pants = "#e9e9e9", shirt = "#9e2b2b";
+    limb(x, w(.05, .95), w(.15, .5, -.15), sc * .15, pants); limb(x, w(.15, .5, -.15), w(.12, 0, -.3), sc * .13, pants);
+    limb(x, w(-.05, .95), w(-.15, .5, .2), sc * .15, pants); limb(x, w(-.15, .5, .2), w(-.12, 0, .35), sc * .13, pants);
+    limb(x, w(0, .95), w(0, 1.45), sc * .27, shirt);
+    const head = w(0, 1.65 + takeFlinch * .02);
+    x.fillStyle = "#1d1d1d"; x.beginPath(); x.arc(head.x, head.y, sc * .14, 0, Math.PI * 2); x.fill();
+    x.fillStyle = "#2a2a2a"; x.fillRect(head.x - sc * .02 * s - sc * .1, head.y + sc * .02, sc * .2, sc * .05);
+    /* 手與球棒：從肩後上方揮到身體前方 */
+    const ang = lerp(-2.3, 1.2, ease(swing));
+    const handsP = { lx: lerp(.15, -.25, ease(swing)), ly: lerp(1.35, 1.0, ease(swing)), lz: lerp(.1, -.25, ease(swing)) };
+    const hp = w(handsP.lx, handsP.ly, handsP.lz);
+    limb(x, w(0, 1.4), hp, sc * .1, shirt);
+    const len = .85;
+    const tipW = { lx: handsP.lx + Math.cos(ang) * len * -1, ly: handsP.ly + Math.sin(-ang) * len * .45 + (swing < .05 ? .55 : 0) * (1 - swing * 10), lz: handsP.lz + Math.sin(ang) * -len * .5 };
+    const tip = w(tipW.lx, tipW.ly, tipW.lz);
+    limb(x, hp, tip, sc * .07, "#c8925a");
+    x.fillStyle = "#3b2a1a"; x.beginPath(); x.arc(hp.x, hp.y, sc * .06, 0, Math.PI * 2); x.fill();
+  }
+
+  /* 捕手手套 */
+  function drawMitt(x, c, pop){
+    const wp = cellWorld(c), p = P(wp.X, wp.Y, -.15), r = p.s * .075 * (1 + pop * .15);
+    x.save(); x.globalAlpha = .88; x.fillStyle = "#7a4f2a"; x.beginPath(); x.ellipse(p.x, p.y, r, r * .9, 0, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = "#4a2f17"; x.lineWidth = 2; x.stroke();
+    x.fillStyle = "#5a3a1e"; x.beginPath(); x.ellipse(p.x, p.y, r * .5, r * .45, 0, 0, Math.PI * 2); x.fill();
+    x.restore();
+  }
+
+  /* 好球帶格子 */
+  function drawZone(x, alpha){
+    const g = game; if (!g) return;
+    x.save(); x.globalAlpha = alpha;
+    for (let row = 0; row < 5; row++) for (let col = 0; col < 5; col++) {
+      const r = cellRect(col, row), z = col >= 1 && col <= 3 && row >= 1 && row <= 3;
+      const cx = handOf() === "R" ? col : 4 - col;
+      const sel = g.sel.cell && g.sel.cell.x === cx && g.sel.cell.y === row && !busy;
+      x.fillStyle = sel ? "rgba(242,204,96,.45)" : z ? "rgba(255,255,255,.13)" : "rgba(255,255,255,.05)";
+      x.fillRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
+      x.strokeStyle = sel ? "#f2cc60" : z ? "rgba(255,255,255,.75)" : "rgba(255,255,255,.3)"; x.lineWidth = sel ? 3 : z ? 1.6 : 1;
+      x.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
+    }
+    /* 已投過的球 */
+    const n = busy ? g.pitches.length - 1 : g.pitches.length;
+    g.pitches.slice(0, n).forEach(p => {
+      const wpos = cellWorld(p), q = P(wpos.X, wpos.Y, 0);
+      x.fillStyle = { swstr:"#f2cc60", called:"#f2cc60", foul:"#b9a56a", ball:"#3fb950", hit:"#f85149", out:"#58a6ff" }[p.res] || "#fff";
+      x.beginPath(); x.arc(q.x, q.y, Math.max(9, q.s * .045), 0, Math.PI * 2); x.fill();
+      x.fillStyle = "#111"; x.font = `bold ${Math.round(W * .03)}px sans-serif`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(p.n, q.x, q.y + .5);
+    });
+    x.restore();
+    const r0 = cellRect(0, 4), r4 = cellRect(4, 4);
+    x.fillStyle = "rgba(255,255,255,.8)"; x.font = `${Math.round(W * .032)}px sans-serif`; x.textBaseline = "alphabetic";
+    const inL = handOf() === "R";
+    x.textAlign = "left"; x.fillText(inL ? "← 內角" : "← 外角", r0.x, r0.y + r0.h + W * .045);
+    x.textAlign = "right"; x.fillText(inL ? "外角 →" : "內角 →", r4.x + r4.w, r4.y + r4.h + W * .045);
+  }
+
+  /* 漫畫風爆炸字框 */
+  function burst(x, text, color, k){
+    const cx = W / 2, cy = H * .3, R = W * .2 * (.6 + .4 * ease(k * 3));
+    x.save(); x.translate(cx, cy); x.rotate(-.06);
+    x.beginPath();
+    const n = 18; for (let i = 0; i <= n * 2; i++) { const a = i / (n * 2) * Math.PI * 2, r = i % 2 ? R * .72 : R * (1 + (i % 4 === 0 ? .12 : 0)); x.lineTo(Math.cos(a) * r * 1.35, Math.sin(a) * r * .8); }
+    x.closePath(); x.fillStyle = "#fff"; x.fill(); x.lineWidth = 4; x.strokeStyle = "#111"; x.stroke();
+    x.fillStyle = color; x.font = `900 ${Math.round(R * .5)}px sans-serif`; x.textAlign = "center"; x.textBaseline = "middle";
+    x.lineWidth = 5; x.strokeStyle = "#111"; x.strokeText(text, 0, 2); x.fillText(text, 0, 2);
+    x.restore();
+  }
+
+  /* 球路 */
+  const BRK = {
+    "四縫速球":[-.05, -.1], "二縫速球":[-.16, .1], "伸卡球":[-.18, .18], "卡特球":[.12, .03], "噴射球":[0, .04], "上飄速球":[-.05, -.22],
+    "滑球":[.25, .12], "橫掃球":[.42, .05], "滑曲球":[.28, .28], "曲球":[.12, .45, .25], "彈指曲球":[.1, .48, .2], "慢速曲球":[.1, .55, .5],
+    "變速球":[-.14, .22], "圓圈變速球":[-.2, .24], "指叉球":[0, .36], "快速指叉球":[-.04, .28], "螺旋球":[-.28, .22], "掌心球":[-.06, .26],
+    "蝴蝶球":[0, .15], "小便球":[0, .3, 1.4]
+  };
+  const DEF_KMH = { "四縫速球":128, "二縫速球":125, "伸卡球":124, "卡特球":122, "噴射球":126, "上飄速球":120, "滑球":112, "橫掃球":108, "滑曲球":106,
+    "曲球":100, "彈指曲球":104, "慢速曲球":88, "變速球":110, "圓圈變速球":108, "指叉球":115, "快速指叉球":120, "螺旋球":105, "掌心球":100, "蝴蝶球":95, "小便球":70 };
+  function kmhFor(type){
+    const pt = store.pitchers.find(p => p.id === store.play.pit);
+    const reg = pt && (pt.pitches || []).find(p => p.type === type && +p.kmh);
+    return reg ? +reg.kmh : (DEF_KMH[type] || 115);
+  }
+  function ballPos(pt, u){
+    const side = (store.play.phand || "R") === "R" ? 1 : -1, low = store.play.slot === "sub" ? 2 : store.play.slot === "side" ? 1 : 0;
+    const r = slotRel(), t = cellWorld(pt), b = BRK[pt.type] || [.1, .15];
+    const dx = b[0] * side * (low ? 1.3 : 1), drop = b[1] * (low ? .6 : 1) + (low === 2 && isFast(pt.type) ? -.12 : 0), arc = b[2] || 0;
+    const X = r.X + (t.X - r.X) * u - dx * (u - Math.pow(u, 2.5));
+    let Y = r.Y + (t.Y - r.Y) * u + drop * (u - Math.pow(u, 2.2)) * 1.6 + arc * Math.sin(Math.PI * Math.min(u, 1));
+    let x2 = X; if (pt.type === "蝴蝶球") x2 += Math.sin(u * 19) * .05 * u;
+    return { X:x2, Y, Z: REL_Z * (1 - u) };
+  }
+
+  /* 每一球的動畫腳本 */
+  function script(pt){
+    const kmh = kmhFor(pt.type), flight = Math.min(1500, 18 / (kmh / 3.6) * 1650);
+    const swingShift = { whiffEarly:-130, foulEarly:-60, whiffLate:110, foulLate:60, takeLate:999, lunge:-90 }[pt.cue] || 0;
+    const swung = pt.swing || pt.cue === "halfSwing";
+    const contact = ["foul", "hit", "out"].includes(pt.res);
+    const R = rng(pt.n * 97 + pt.x * 7 + pt.y);
+    let fly = null;
+    if (contact) {
+      if (pt.res === "foul") fly = { X:(R() < .5 ? -1 : 1) * (6 + R() * 10), Y:8 + R() * 10, Z:(R() < .5 ? -6 : 8), t:800 };
+      else if (pt.res === "hit") fly = { X:(R() - .5) * 50, Y:0, Z:45 + R() * 35, apex:6 + R() * 18, t:1300 };
+      else fly = R() < .5 ? { X:(R() - .5) * 30, Y:0, Z:20 + R() * 12, apex:.4, t:900 } : { X:(R() - .5) * 20, Y:0, Z:25 + R() * 30, apex:18 + R() * 8, t:1500 };
+    }
+    const label = pt.res === "hit" ? "安打！" : pt.res === "out" ? "出局！" : pt.res === "foul" ? "界外" : pt.res === "ball" ? "壞球" : pt.res === "swstr" ? "揮空！" : "好球！";
+    const color = { hit:"#f85149", out:"#1f6feb", foul:"#9a6700", ball:"#1a7f37", swstr:"#d29922", called:"#d29922" }[pt.res];
+    return { pt, kmh, flight, wind:950, swingAt: swung ? swingShift : null, half: pt.cue === "halfSwing", lunge: pt.cue === "lunge", contact, fly, label, color, post: contact ? fly.t : 420 };
+  }
+
+  let rafId = 0, startT = 0, sc = null, done = null, skipReq = false;
+  function frame(now){
+    const cv = document.getElementById("c3d"); if (!cv) { rafId = requestAnimationFrame(frame); return; }
+    const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.drawImage(bg, 0, 0, W, H);
+    const t = now - startT, relT = sc.wind * .78, arrive = relT + sc.flight, end = arrive + sc.post + 900;
+    if (skipReq || t > end) { finish(); return; }
+    drawPitcher(x, Math.min(1, t / sc.wind));
+    /* 球 */
+    let ballDrawn = null;
+    if (t >= relT) {
+      const u = (t - relT) / sc.flight;
+      if (u <= 1) ballDrawn = ballPos(sc.pt, u);
+      else if (sc.contact) {
+        const k = Math.min(1, (t - arrive) / sc.fly.t), o = ballPos(sc.pt, 1);
+        const apex = sc.fly.apex !== undefined ? sc.fly.apex : sc.fly.Y;
+        ballDrawn = { X: lerp(o.X, sc.fly.X, k), Y: lerp(o.Y, sc.fly.Y, k) + apex * 4 * k * (1 - k), Z: lerp(.2, sc.fly.Z, k) };
+      } else ballDrawn = ballPos(sc.pt, 1);
+    }
+    /* 打者揮棒 */
+    let sw = 0;
+    if (sc.swingAt !== null) { const c = arrive + sc.swingAt; sw = Math.max(0, Math.min(1, (t - (c - 160)) / 320)); if (sc.half) sw = Math.min(sw, .35); }
+    const lean = sc.lunge && sw > .5 ? (sw - .5) * 2 : 0;
+    drawZone(x, .9);
+    if (t > arrive && !sc.contact) drawMitt(x, sc.pt, Math.max(0, 1 - (t - arrive) / 150));
+    else drawMitt(x, sc.pt.aimX !== undefined ? { x:sc.pt.aimX, y:sc.pt.aimY } : sc.pt, 0);
+    if (ballDrawn) {
+      const g0 = P(ballDrawn.X, 0, ballDrawn.Z), q = P(ballDrawn.X, ballDrawn.Y, ballDrawn.Z);
+      x.fillStyle = "rgba(0,0,0,.3)"; x.beginPath(); x.ellipse(g0.x, g0.y, q.s * .05, q.s * .02, 0, 0, Math.PI * 2); x.fill();
+      const behindBatter = ballDrawn.Z < .4;
+      if (!behindBatter) drawBall(x, q);
+      drawBatter(x, sw, lean, 0);
+      if (behindBatter) drawBall(x, q);
+    } else drawBatter(x, sw, lean, 0);
+    /* 球速 */
+    if (t >= relT) {
+      x.fillStyle = "rgba(13,17,23,.75)"; x.fillRect(W - W * .3, W * .03, W * .27, W * .09);
+      x.fillStyle = "#f2cc60"; x.font = `900 ${Math.round(W * .055)}px sans-serif`; x.textAlign = "right"; x.textBaseline = "middle";
+      x.fillText(sc.kmh + " km/h", W - W * .05, W * .075);
+      x.fillStyle = "rgba(13,17,23,.75)"; x.fillRect(W - W * .3, W * .12, W * .27, W * .06);
+      x.fillStyle = "#e6edf3"; x.font = `bold ${Math.round(W * .034)}px sans-serif`; x.textAlign = "right"; x.fillText(sc.pt.type, W - W * .05, W * .152);
+    }
+    if (t > arrive + 120) burst(x, sc.label, sc.color, (t - arrive - 120) / 1000);
+    rafId = requestAnimationFrame(frame);
+  }
+  function drawBall(x, q){
+    const r = Math.max(2, q.s * .037);
+    x.fillStyle = "#fbfaf5"; x.beginPath(); x.arc(q.x, q.y, r, 0, Math.PI * 2); x.fill();
+    if (r > 4) { x.strokeStyle = "#d63b3b"; x.lineWidth = Math.max(1, r / 7);
+      x.beginPath(); x.arc(q.x - r * .9, q.y, r * .7, -.9, .9); x.stroke(); x.beginPath(); x.arc(q.x + r * .9, q.y, r * .7, Math.PI - .9, Math.PI + .9); x.stroke(); }
+  }
+  function finish(){
+    cancelAnimationFrame(rafId); busy = false; skipReq = false;
+    const cb = done; done = null; if (cb) cb();
+  }
+
+  /* 靜態畫面 */
+  function still(){
+    const cv = document.getElementById("c3d"); if (!cv) return;
+    size(cv);
+    if (busy) return;
+    const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.drawImage(bg, 0, 0, W, H);
+    drawPitcher(x, 0);
+    drawZone(x, 1);
+    if (game && game.sel.cell) drawMitt(x, game.sel.cell, 0);
+    drawBatter(x, 0, 0, 0);
+  }
+  function hit(ev){
+    const cv = document.getElementById("c3d"); if (!cv || busy || !game) return null;
+    const b = cv.getBoundingClientRect(), mx = ev.clientX - b.left, my = ev.clientY - b.top;
+    for (let row = 0; row < 5; row++) for (let col = 0; col < 5; col++) {
+      const r = cellRect(col, row);
+      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) return { x: handOf() === "R" ? col : 4 - col, y: row };
+    }
+    return null;
+  }
+  return {
+    get busy(){ return busy; },
+    mount: still,
+    hit,
+    arm(){ busy = true; },
+    play(pt, cb){
+      const cv = document.getElementById("c3d"); if (!cv) { busy = false; cb && cb(); return; }
+      size(cv); busy = true; done = cb; sc = script(pt); startT = performance.now(); skipReq = false;
+      cancelAnimationFrame(rafId); rafId = requestAnimationFrame(frame);
+    },
+    skip(){ if (busy) skipReq = true; }
+  };
+})();
+
+/* 掛到原本的畫面流程上 */
+const _render2d = render;
+render = function(k){ _render2d(k); S3.mount(); };
+window.addEventListener("resize", () => S3.mount());
+document.addEventListener("pointerup", e => {
+  if (e.target.id !== "c3d") return;
+  if (S3.busy) { S3.skip(); return; }
+  const c = S3.hit(e);
+  if (c && game && !game.end) { game.sel.cell = c; render(true); }
+});
 
 /* ---------- 設定 ---------- */
 function viewMore(){
