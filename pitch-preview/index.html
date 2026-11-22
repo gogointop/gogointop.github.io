@@ -189,6 +189,18 @@ b.r-swstr,b.r-called,b.r-foul{color:var(--accent)} b.r-ball{color:var(--next)} b
 @keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
 .stage3d{display:flex;justify-content:center;margin:6px 0;touch-action:manipulation}
 #c3d{border-radius:14px;border:1px solid var(--line);max-width:100%}
+.brief{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 12px;font-size:.88rem;margin-bottom:4px}
+.brief .bn{color:var(--next);font-weight:700;margin-top:2px}
+.more{margin-top:8px}
+.dock{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:5;background:rgba(13,17,23,.96);border-top:1px solid var(--line);padding:8px 12px;backdrop-filter:blur(6px)}
+.dock .tgrid.pt{display:flex;gap:8px;overflow-x:auto;margin:0 auto 8px;max-width:720px;scrollbar-width:none}
+.dock .tgrid.pt::-webkit-scrollbar{display:none}
+.dock .tgrid.pt button{flex:0 0 auto;min-width:92px;min-height:46px;padding:0 12px}
+.dock .drow{display:flex;gap:8px;max-width:720px;margin:0 auto}
+.dock .drow .btn{margin:0;min-height:52px}
+.dock .drow .btn.pri{flex:1}
+.dock .drow .btn.rp{flex:0 0 56px;font-size:1.3rem}
+.dock-space{height:130px}
 .rv{border-bottom:1px solid var(--line);padding:8px 2px}
 
 /* 底部分頁 */
@@ -1000,11 +1012,14 @@ function viewLive(){
       ${a.slot ? `<div><span class="k">角度</span>${esc(a.slot)}</div>` : ""}</div>` : "";
   return `<div class="sb"><div class="cnt"><span>B</span>${dots(g.b, 3, "b")}<span>S</span>${dots(g.s, 2, "s")}</div>
       <div class="who">${g.level !== "am" ? LEVELS[g.level] + "・" : ""}${g.prof.hand === "R" ? "右打者" : "左打者"}（${g.same ? "同側" : "異側"}）・第 ${g.pitches.length + 1} 球</div><button data-g="quit">放棄</button></div>
-    ${S3.busy ? "" : fb + ob + adv}${fieldHtml(g, true)}
-    <div class="tgrid pt">${store.play.types.map(t => `<button data-g="pt" data-v="${esc(t)}" class="${g.sel.type === t ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
-    ${S3.busy ? `<button class="btn pri" disabled>投球中…（點球場可跳過）</button>` :
+    ${S3.busy ? "" : (last ? `<div class="brief"><span class="muted">第 ${last.n} 球</span> ${esc(last.type)}・${locName(last)} → <b class="r-${last.res}">${RES[last.res]}</b>${last.miss ? ` <span class="miss">控球偏了</span>` : ""}${hints ? `<div class="bn">💡 下一球：${esc(a.it.next)}</div>` : ""}</div>`
+      : hints ? `<div class="brief"><div class="bn">💡 第一球：${esc(a.it.next)}</div></div>` : "")}
+    ${fieldHtml(g, true)}
+    ${S3.busy ? "" : `<div class="more">${fb}${ob}${adv}</div>`}
+    <div class="dock"><div class="tgrid pt">${store.play.types.map(t => `<button data-g="pt" data-v="${esc(t)}" class="${g.sel.type === t ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
+    <div class="drow">${S3.busy ? `<button class="btn pri" disabled>投球中…（點球場可跳過）</button>` :
       `<button class="btn pri" data-g="throw"${g.sel.type && g.sel.cell ? "" : " disabled"}>${g.sel.type && g.sel.cell ? "投球：" + esc(g.sel.type) + "・" + locName(g.sel.cell) : "先選球種，再點球場上的位置"}</button>
-      ${last ? `<button class="btn" data-g="replay">🔁 重播第 ${last.n} 球</button>` : ""}`}`;
+      ${last ? `<button class="btn rp" data-g="replay" aria-label="重播第 ${last.n} 球">🔁</button>` : ""}`}</div></div><div class="dock-space"></div>`;
 }
 function viewDone(){
   const g = game, P = g.prof, sc = score(g), last = g.pitches[g.pitches.length - 1];
@@ -1245,7 +1260,10 @@ const S3 = (() => {
   function rng(seed){ let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
 
   function size(cv){
-    const cw = Math.min(cv.parentElement.clientWidth, 460);
+    /* 球場要和底部的球種列、投球鍵同時留在畫面上 */
+    const room = window.innerHeight - 64 - 130 - 56 - 52 - 100;
+    let cw = Math.min(cv.parentElement.clientWidth, 460);
+    if (cw * 1.3 > room) cw = Math.max(240, Math.floor(room / 1.3));
     const nk = cw + "x" + (window.devicePixelRatio || 1);
     W = cw; H = Math.round(cw * 1.3); F = 1.85 * W; H0 = .40 * W; dpr = window.devicePixelRatio || 1;
     cv.style.width = W + "px"; cv.style.height = H + "px";
